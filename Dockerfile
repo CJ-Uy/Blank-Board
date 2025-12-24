@@ -36,9 +36,6 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/server.js ./
 
-# Create data directory for SQLite
-RUN mkdir -p data
-
 # Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 sveltekit

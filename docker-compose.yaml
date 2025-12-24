@@ -8,7 +8,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_URL=/app/data/local.db
+      - DATABASE_URL=postgresql://blankboard:blankboard@db:5432/blankboard
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
       # MinIO Configuration - set these in your .env or Coolify
@@ -16,8 +16,9 @@ services:
       - MINIO_USER=${MINIO_USER}
       - MINIO_PASSWORD=${MINIO_PASSWORD}
       - MINIO_BUCKET=${MINIO_BUCKET:-blank-board}
-    volumes:
-      - sqlite_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
@@ -26,5 +27,21 @@ services:
       retries: 3
       start_period: 10s
 
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=blankboard
+      - POSTGRES_PASSWORD=blankboard
+      - POSTGRES_DB=blankboard
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blankboard -d blankboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
-  sqlite_data:
+  postgres_data:
