@@ -61,6 +61,19 @@ async function ensureBucket() {
 	try {
 		await s3Client.send(new HeadBucketCommand({ Bucket: bucket }));
 		console.log(`Bucket ${bucket} exists`);
+
+		// Always try to set public read policy on existing bucket
+		try {
+			await s3Client.send(
+				new PutBucketPolicyCommand({
+					Bucket: bucket,
+					Policy: JSON.stringify(getPublicReadPolicy(bucket))
+				})
+			);
+			console.log(`Set public read policy on bucket: ${bucket}`);
+		} catch (policyError) {
+			console.warn(`Could not set bucket policy (may already be set or lack permissions):`, policyError);
+		}
 	} catch (error: unknown) {
 		const isNotFound =
 			error &&
