@@ -3,6 +3,12 @@
 	import { emitTabCreate, emitTabDelete, emitTabUpdate } from '$lib/stores/socket';
 	import { generateId } from '$lib/utils';
 
+	interface Props {
+		onTabSelect?: () => void;
+	}
+
+	let { onTabSelect }: Props = $props();
+
 	let editingTabId = $state<string | null>(null);
 	let editingName = $state('');
 	let contextMenuTab = $state<string | null>(null);
@@ -34,6 +40,7 @@
 
 	function selectTab(id: string) {
 		boardStore.setActiveTab(id);
+		onTabSelect?.();
 	}
 
 	function startEditing(tab: ClientTab, event: MouseEvent) {
@@ -76,7 +83,8 @@
 		contextMenuTab = null;
 	}
 
-	async function deleteTab(tabId: string) {
+	async function deleteTab(tabId: string, event?: MouseEvent) {
+		event?.stopPropagation();
 		hideContextMenu();
 		boardStore.removeTab(tabId);
 
@@ -99,12 +107,18 @@
 
 <svelte:window onclick={hideContextMenu} />
 
-<div class="flex h-full w-[200px] flex-col border-r border-gray-200 bg-white">
-	<div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-		<span class="text-xs font-medium tracking-wide text-gray-500 uppercase">Tabs</span>
+<div
+	class="flex h-full w-[200px] flex-col border-r border-[var(--border-color)] bg-[var(--bg-secondary)]"
+>
+	<div
+		class="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-3"
+	>
+		<span class="text-xs font-medium tracking-wide uppercase text-[var(--text-secondary)]"
+			>Tabs</span
+		>
 		<button
 			onclick={createTab}
-			class="flex h-6 w-6 items-center justify-center text-gray-400 transition-colors hover:text-[#1a1a1a]"
+			class="flex h-6 w-6 items-center justify-center text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
 			title="New tab"
 		>
 			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,47 +130,72 @@
 
 	<nav class="flex-1 overflow-y-auto py-2">
 		{#each $sortedTabs as tab (tab.id)}
-			<button
-				onclick={() => selectTab(tab.id)}
-				oncontextmenu={(e) => showContextMenu(tab.id, e)}
-				ondblclick={(e) => startEditing(tab, e)}
-				class="group flex w-full items-center px-4 py-2 text-left text-sm transition-colors
+			<div
+				class="group relative flex w-full items-center transition-colors
 					{$activeTabId === tab.id
-					? 'border-l-2 border-[#1a1a1a] bg-gray-50 text-[#1a1a1a]'
-					: 'border-l-2 border-transparent text-gray-600 hover:bg-gray-50 hover:text-[#1a1a1a]'}"
+					? 'border-l-2 border-[var(--accent-color)] bg-[var(--hover-bg)] text-[var(--text-primary)]'
+					: 'border-l-2 border-transparent text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]'}"
 			>
-				{#if editingTabId === tab.id}
-					<input
-						type="text"
-						bind:value={editingName}
-						onblur={saveTabName}
-						onkeydown={handleKeydown}
-						onclick={(e) => e.stopPropagation()}
-						class="w-full border-0 bg-transparent p-0 text-sm focus:ring-0"
-						autofocus
-					/>
-				{:else}
-					<span class="truncate">{tab.name}</span>
-				{/if}
-			</button>
+				<button
+					onclick={() => selectTab(tab.id)}
+					oncontextmenu={(e) => showContextMenu(tab.id, e)}
+					ondblclick={(e) => startEditing(tab, e)}
+					class="flex-1 px-4 py-2 text-left text-sm"
+				>
+					{#if editingTabId === tab.id}
+						<input
+							type="text"
+							bind:value={editingName}
+							onblur={saveTabName}
+							onkeydown={handleKeydown}
+							onclick={(e) => e.stopPropagation()}
+							class="w-full border-0 bg-transparent p-0 text-sm text-[var(--text-primary)] focus:ring-0"
+							autofocus
+						/>
+					{:else}
+						<span class="truncate">{tab.name}</span>
+					{/if}
+				</button>
+
+				<!-- Delete button - visible on hover -->
+				<button
+					onclick={(e) => deleteTab(tab.id, e)}
+					class="mr-2 flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity hover:bg-red-100 group-hover:opacity-100 dark:hover:bg-red-900/30"
+					title="Delete tab"
+				>
+					<svg
+						class="h-3.5 w-3.5 text-red-500"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			</div>
 		{/each}
 	</nav>
 </div>
 
 {#if contextMenuTab}
 	<div
-		class="fixed z-50 min-w-[120px] rounded border border-gray-200 bg-white py-1 shadow-lg"
+		class="fixed z-50 min-w-[120px] rounded border border-[var(--border-color)] bg-[var(--bg-secondary)] py-1 shadow-lg"
 		style="left: {contextMenuPosition.x}px; top: {contextMenuPosition.y}px;"
 	>
 		<button
 			onclick={() => renameTab(contextMenuTab!)}
-			class="flex w-full items-center px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+			class="flex w-full items-center px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
 		>
 			Rename
 		</button>
 		<button
 			onclick={() => deleteTab(contextMenuTab!)}
-			class="flex w-full items-center px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+			class="flex w-full items-center px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
 		>
 			Delete
 		</button>

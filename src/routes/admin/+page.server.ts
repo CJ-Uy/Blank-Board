@@ -1,9 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { eq, count, sql } from 'drizzle-orm';
+import { count, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { env } from '$env/dynamic/private';
-import { statSync } from 'fs';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -29,14 +28,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		.from(table.user)
 		.orderBy(table.user.lastActiveAt);
 
-	// Get database file size
+	// Get database size from PostgreSQL
 	let dbSize = 0;
 	try {
-		const dbPath = env.DATABASE_URL || 'local.db';
-		const stats = statSync(dbPath);
-		dbSize = stats.size;
+		const result = await db.execute(sql`SELECT pg_database_size(current_database()) as size`);
+		if (result.length > 0 && result[0].size) {
+			dbSize = Number(result[0].size);
+		}
 	} catch {
-		// File doesn't exist or can't be read
+		// Unable to get database size
 	}
 
 	// Get connected clients (from global if available)
@@ -63,8 +63,12 @@ export const load: PageServerLoad = async ({ cookies }) => {
 export const actions: Actions = {
 	login: async ({ request, cookies }) => {
 		const formData = await request.formData();
-		const username = formData.get('username');
-		const password = formData.get('password');
+		const username = formData.get('username')?.toString().trim();
+		const password = formData.get('password')?.toString();
+
+		if (!username || !password) {
+			return fail(400, { message: 'Username and password are required' });
+		}
 
 		const adminUsername = env.ADMIN_USERNAME || 'admin';
 		const adminPassword = env.ADMIN_PASSWORD || 'changeme';

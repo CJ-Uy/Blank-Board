@@ -19,12 +19,12 @@
 		'December'
 	];
 
-	const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-	const day = $derived(now.getDate());
-	const month = $derived(monthNames[now.getMonth()]);
-	const year = $derived(now.getFullYear());
-	const weekday = $derived(dayNames[now.getDay()]);
+	const currentDay = $derived(now.getDate());
+	const currentMonth = $derived(now.getMonth());
+	const currentYear = $derived(now.getFullYear());
+	const monthName = $derived(monthNames[currentMonth]);
 	const time = $derived(
 		now.toLocaleTimeString('en-US', {
 			hour: '2-digit',
@@ -33,6 +33,47 @@
 			hour12: false
 		})
 	);
+
+	// Get calendar days for the current month
+	const calendarDays = $derived.by(() => {
+		const firstDay = new Date(currentYear, currentMonth, 1);
+		const lastDay = new Date(currentYear, currentMonth + 1, 0);
+		const daysInMonth = lastDay.getDate();
+		const startingDay = firstDay.getDay();
+
+		const days: { day: number; isCurrentMonth: boolean; isToday: boolean }[] = [];
+
+		// Previous month days
+		const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+		for (let i = startingDay - 1; i >= 0; i--) {
+			days.push({
+				day: prevMonthLastDay - i,
+				isCurrentMonth: false,
+				isToday: false
+			});
+		}
+
+		// Current month days
+		for (let i = 1; i <= daysInMonth; i++) {
+			days.push({
+				day: i,
+				isCurrentMonth: true,
+				isToday: i === currentDay
+			});
+		}
+
+		// Next month days (fill to complete 6 rows = 42 cells)
+		const remainingDays = 42 - days.length;
+		for (let i = 1; i <= remainingDays; i++) {
+			days.push({
+				day: i,
+				isCurrentMonth: false,
+				isToday: false
+			});
+		}
+
+		return days;
+	});
 
 	onMount(() => {
 		interval = setInterval(() => {
@@ -47,18 +88,44 @@
 	});
 </script>
 
-<div class="flex h-full w-[200px] flex-col border-l border-gray-200 bg-white px-6 py-8">
-	<div class="text-center">
-		<p class="text-sm font-medium tracking-wide text-gray-500 uppercase">{month}</p>
-		<p class="mt-1 text-sm text-gray-400">{year}</p>
+<div
+	class="flex h-full w-[220px] flex-col border-l border-(--border-color) bg-(--bg-secondary) px-4 py-4"
+>
+	<!-- Month and Year header -->
+	<div class="mb-3 flex items-center justify-between">
+		<div>
+			<span class="text-sm font-medium text-(--text-primary)">{monthName}</span>
+			<span class="ml-1 text-sm text-(--text-muted)">{currentYear}</span>
+		</div>
 	</div>
 
-	<div class="my-8 text-center">
-		<p class="text-6xl font-extralight tabular-nums text-[#1a1a1a]">{day}</p>
-		<p class="mt-2 text-sm text-gray-500">{weekday}</p>
+	<!-- Day names header -->
+	<div class="mb-1 grid grid-cols-7 gap-0">
+		{#each dayNames as dayName}
+			<div class="py-1 text-center text-xs font-medium text-(--text-muted)">
+				{dayName}
+			</div>
+		{/each}
 	</div>
 
-	<div class="mt-auto text-center">
-		<p class="font-mono text-2xl tabular-nums text-[#1a1a1a]">{time}</p>
+	<!-- Calendar grid -->
+	<div class="grid grid-cols-7 gap-0">
+		{#each calendarDays as { day, isCurrentMonth, isToday }}
+			<div
+				class="flex h-7 w-7 items-center justify-center text-xs
+					{isToday
+					? 'rounded-full bg-(--accent-color) font-medium text-(--bg-secondary)'
+					: isCurrentMonth
+						? 'text-(--text-primary)'
+						: 'text-(--text-muted)'}"
+			>
+				{day}
+			</div>
+		{/each}
+	</div>
+
+	<!-- Current time -->
+	<div class="mt-auto pt-4 text-center">
+		<p class="font-mono text-2xl tabular-nums text-(--text-primary)">{time}</p>
 	</div>
 </div>

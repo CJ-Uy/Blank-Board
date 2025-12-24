@@ -1,3 +1,33 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+	--bg-primary: #fafafa;
+	--bg-secondary: #ffffff;
+	--text-primary: #1a1a1a;
+	--text-secondary: #6b7280;
+	--text-muted: #9ca3af;
+	--border-color: #e5e7eb;
+	--accent-color: #1a1a1a;
+	--hover-bg: #f9fafb;
+}
+
+.dark {
+	--bg-primary: #0a0a0a;
+	--bg-secondary: #141414;
+	--text-primary: #fafafa;
+	--text-secondary: #a1a1aa;
+	--text-muted: #71717a;
+	--border-color: #27272a;
+	--accent-color: #fafafa;
+	--hover-bg: #1a1a1a;
+}
+
+body {
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
