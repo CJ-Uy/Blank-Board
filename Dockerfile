@@ -35,6 +35,7 @@ RUN pnpm install --frozen-lockfile --prod
 # Copy built application from builder stage
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/server.js ./
+COPY --from=builder /app/start.js ./
 
 # Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
@@ -50,5 +51,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Start the server
-CMD ["node", "server.js"]
+# Start the server (runs migrations first)
+CMD ["node", "start.js"]
