@@ -7,6 +7,7 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"start": "node server.js",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -56,7 +57,18 @@
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.958.0",
+		"@aws-sdk/s3-request-presigner": "^3.958.0",
 		"@node-rs/argon2": "^2.0.2",
-		"better-sqlite3": "^12.5.0"
+		"better-sqlite3": "^12.5.0",
+		"socket.io": "^4.8.3",
+		"socket.io-client": "^4.8.3",
+		"uuid": "^13.0.0"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"better-sqlite3",
+			"esbuild"
+		]
 	}
 }

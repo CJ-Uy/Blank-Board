@@ -25,3 +25,12 @@ vite.config.ts.timestamp-*
 
 # SQLite
 *.db
+*.db-journal
+*.db-wal
+
+# Uploads
+/uploads
+
+# Playwright
+/playwright-report
+/playwright/.cache
