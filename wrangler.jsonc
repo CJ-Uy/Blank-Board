@@ -60,5 +60,9 @@
 			"tag": "v1",
 			"new_classes": ["UserSync"]
 		}
-	]
+	],
+
+	"observability": {
+		"enabled": true
+	}
 }
