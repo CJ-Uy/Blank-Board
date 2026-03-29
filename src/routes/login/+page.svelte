@@ -16,6 +16,19 @@
 	let layer = $state<'A' | 'B'>('A');
 
 	// ─── Grid A — Pattern Lock ────────────────────────────────────────────────────
+	// Intermediate dot that must be captured when jumping between two non-adjacent dots.
+	// Key = "from,to", value = the dot index in between.
+	const SKIP_DOT: Record<string, number> = {
+		'0,2': 1, '2,0': 1, // top row
+		'3,5': 4, '5,3': 4, // middle row
+		'6,8': 7, '8,6': 7, // bottom row
+		'0,6': 3, '6,0': 3, // left col
+		'1,7': 4, '7,1': 4, // center col
+		'2,8': 5, '8,2': 5, // right col
+		'0,8': 4, '8,0': 4, // main diagonal
+		'2,6': 4, '6,2': 4, // anti diagonal
+	};
+
 	const DOT_POSITIONS = [
 		{ x: 50, y: 50 },  { x: 150, y: 50 },  { x: 250, y: 50 },
 		{ x: 50, y: 150 }, { x: 150, y: 150 }, { x: 250, y: 150 },
@@ -27,6 +40,17 @@
 	let mousePos = $state({ x: 0, y: 0 });
 	let svgRef = $state<SVGSVGElement | null>(null);
 	let formRef = $state<HTMLFormElement | null>(null);
+
+	// Adds a dot to the pattern, auto-inserting any unvisited intermediate dot first.
+	function addDotToPattern(idx: number) {
+		if (patternA.includes(idx)) return;
+		const last = patternA[patternA.length - 1];
+		const skip = last !== undefined ? SKIP_DOT[`${last},${idx}`] : undefined;
+		const next = [...patternA];
+		if (skip !== undefined && !next.includes(skip)) next.push(skip);
+		next.push(idx);
+		patternA = next;
+	}
 
 	function svgCoords(e: MouseEvent | Touch): { x: number; y: number } {
 		const pt = svgRef!.createSVGPoint();
@@ -59,7 +83,7 @@
 		const coords = svgCoords(e);
 		mousePos = coords;
 		const dot = nearestDot(coords.x, coords.y);
-		if (dot !== null && !patternA.includes(dot)) patternA = [...patternA, dot];
+		if (dot !== null) addDotToPattern(dot);
 	}
 
 	function endPattern() { dragging = false; }
@@ -80,7 +104,7 @@
 		const coords = svgCoords(e.touches[0]);
 		mousePos = coords;
 		const dot = nearestDot(coords.x, coords.y);
-		if (dot !== null && !patternA.includes(dot)) patternA = [...patternA, dot];
+		if (dot !== null) addDotToPattern(dot);
 	}
 
 	// ─── Grid B — Plain keypad ────────────────────────────────────────────────────
@@ -114,7 +138,7 @@
 		if (idx === undefined) return;
 		e.preventDefault();
 		if (layer === 'A') {
-			if (!patternA.includes(idx)) patternA = [...patternA, idx];
+			addDotToPattern(idx);
 		} else {
 			tapTile(idx);
 		}
