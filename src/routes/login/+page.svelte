@@ -28,11 +28,11 @@
 	let svgRef = $state<SVGSVGElement | null>(null);
 
 	function svgCoords(e: MouseEvent | Touch): { x: number; y: number } {
-		const rect = svgRef!.getBoundingClientRect();
-		return {
-			x: ((e.clientX - rect.left) / rect.width) * 300,
-			y: ((e.clientY - rect.top) / rect.height) * 300
-		};
+		const pt = svgRef!.createSVGPoint();
+		pt.x = e.clientX;
+		pt.y = e.clientY;
+		const svgP = pt.matrixTransform(svgRef!.getScreenCTM()!.inverse());
+		return { x: svgP.x, y: svgP.y };
 	}
 
 	function nearestDot(x: number, y: number): number | null {
