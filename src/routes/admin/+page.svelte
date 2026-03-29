@@ -5,6 +5,13 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	let loading = $state(false);
 
+	function formatBytes(bytes: number): string {
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+		if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+	}
+
 	function formatDate(dateString: string): string {
 		return new Date(dateString).toLocaleString();
 	}
@@ -122,6 +129,10 @@
 				<div class="rounded border border-gray-200 bg-white p-6">
 					<p class="text-sm font-medium text-gray-500 uppercase">Total Tabs</p>
 					<p class="mt-2 text-3xl font-light text-[#1a1a1a]">{data.stats.totalTabs}</p>
+				</div>
+				<div class="rounded border border-gray-200 bg-white p-6">
+					<p class="text-sm font-medium text-gray-500 uppercase">R2 Storage</p>
+					<p class="mt-2 text-3xl font-light text-[#1a1a1a]">{formatBytes(data.stats.r2Bytes)}</p>
 				</div>
 			</div>
 

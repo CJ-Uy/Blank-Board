@@ -4,6 +4,17 @@ import { createDb } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import type { Actions, PageServerLoad } from './$types';
 
+async function getR2StorageBytes(r2: R2Bucket): Promise<number> {
+	let total = 0;
+	let cursor: string | undefined;
+	do {
+		const listed: R2Objects = await r2.list({ limit: 1000, cursor });
+		for (const obj of listed.objects) total += obj.size;
+		cursor = listed.truncated ? listed.cursor : undefined;
+	} while (cursor);
+	return total;
+}
+
 export const load: PageServerLoad = async ({ cookies, platform }) => {
 	const adminSession = cookies.get('admin-session');
 	if (!adminSession) return { authenticated: false };
@@ -23,11 +34,14 @@ export const load: PageServerLoad = async ({ cookies, platform }) => {
 		.from(table.user)
 		.orderBy(table.user.lastActiveAt);
 
+	const r2Bytes = platform?.env?.FILES ? await getR2StorageBytes(platform.env.FILES) : 0;
+
 	return {
 		authenticated: true,
 		stats: {
 			totalUsers: userCount.count,
-			totalTabs: tabCount.count
+			totalTabs: tabCount.count,
+			r2Bytes
 		},
 		users: users.map((u) => ({
 			...u,
