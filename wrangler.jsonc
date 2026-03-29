@@ -24,7 +24,7 @@
     {
       "binding": "DB",
       "database_name": "blank-board",
-      "database_id": "YOUR_D1_DATABASE_ID"
+      "database_id": "b6adff2d-3337-4180-9ffd-23d961bd4496"
     }
   ],
 
@@ -32,8 +32,8 @@
   // Then replace YOUR_KV_NAMESPACE_ID below with the returned ID
   "kv_namespaces": [
     {
-      "binding": "SESSIONS",
-      "id": "YOUR_KV_NAMESPACE_ID"
+      "binding": "CACHE",
+      "id": "91b984c16cc949be95e8197e0b67cb70"
     }
   ],
 
@@ -41,7 +41,7 @@
   "r2_buckets": [
     {
       "binding": "FILES",
-      "bucket_name": "blank-board-files"
+      "bucket_name": "blank-board"
     }
   ],
 
@@ -49,7 +49,7 @@
     "bindings": [
       {
         "name": "USER_SYNC",
-        "class_name": "UserSync"
+        "class_name": "blank_board"
       }
     ]
   },
@@ -57,7 +57,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["UserSync"]
+      "new_classes": ["blank_board"]
     }
   ]
 }
