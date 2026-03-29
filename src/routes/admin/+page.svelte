@@ -5,14 +5,6 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	let loading = $state(false);
 
-	function formatBytes(bytes: number): string {
-		if (bytes === 0) return '0 B';
-		const k = 1024;
-		const sizes = ['B', 'KB', 'MB', 'GB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-	}
-
 	function formatDate(dateString: string): string {
 		return new Date(dateString).toLocaleString();
 	}
@@ -131,14 +123,6 @@
 					<p class="text-sm font-medium text-gray-500 uppercase">Total Tabs</p>
 					<p class="mt-2 text-3xl font-light text-[#1a1a1a]">{data.stats.totalTabs}</p>
 				</div>
-				<div class="rounded border border-gray-200 bg-white p-6">
-					<p class="text-sm font-medium text-gray-500 uppercase">Active Connections</p>
-					<p class="mt-2 text-3xl font-light text-[#1a1a1a]">{data.stats.connectedClients}</p>
-				</div>
-				<div class="rounded border border-gray-200 bg-white p-6">
-					<p class="text-sm font-medium text-gray-500 uppercase">Database Size</p>
-					<p class="mt-2 text-3xl font-light text-[#1a1a1a]">{formatBytes(data.stats.dbSize)}</p>
-				</div>
 			</div>
 
 			<!-- Users table -->
@@ -152,7 +136,7 @@
 							<tr>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>Username</th
+									>User ID</th
 								>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -171,7 +155,7 @@
 						<tbody class="divide-y divide-gray-200">
 							{#each data.users as user}
 								<tr class="hover:bg-gray-50">
-									<td class="px-6 py-4 text-sm font-medium text-[#1a1a1a]">{user.username}</td>
+									<td class="px-6 py-4 font-mono text-xs text-[#1a1a1a]" title={user.id}>{user.id.slice(0, 12)}…</td>
 									<td class="px-6 py-4 text-sm text-gray-500">{user.tabCount}</td>
 									<td class="px-6 py-4 text-sm text-gray-500">{formatDate(user.createdAt)}</td>
 									<td class="px-6 py-4 text-sm text-gray-500">{timeAgo(user.lastActiveAt)}</td>

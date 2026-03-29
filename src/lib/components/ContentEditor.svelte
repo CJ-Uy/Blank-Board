@@ -91,10 +91,10 @@
 			});
 
 			if (res.ok) {
-				const { url } = await res.json();
+				const { url } = await res.json() as { url: string };
 				insertMediaAtCursor(url, file.type);
 			} else {
-				const err = await res.json();
+				const err = await res.json() as { message?: string };
 				console.error('Upload failed:', err.message);
 			}
 		} catch (error) {

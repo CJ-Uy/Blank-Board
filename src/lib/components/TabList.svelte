@@ -108,17 +108,17 @@
 <svelte:window onclick={hideContextMenu} />
 
 <div
-	class="flex h-full w-[200px] flex-col border-r border-[var(--border-color)] bg-[var(--bg-secondary)]"
+	class="flex h-full w-[200px] flex-col border-r border-(--border-color) bg-(--bg-secondary)"
 >
 	<div
-		class="flex items-center justify-between border-b border-[var(--border-color)] px-4 py-3"
+		class="flex items-center justify-between border-b border-(--border-color) px-4 py-3"
 	>
-		<span class="text-xs font-medium tracking-wide uppercase text-[var(--text-secondary)]"
+		<span class="text-xs font-medium tracking-wide uppercase text-(--text-secondary)"
 			>Tabs</span
 		>
 		<button
 			onclick={createTab}
-			class="flex h-6 w-6 items-center justify-center text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+			class="flex h-6 w-6 items-center justify-center text-(--text-muted) transition-colors hover:text-(--text-primary)"
 			title="New tab"
 		>
 			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,8 +133,8 @@
 			<div
 				class="group relative flex w-full items-center transition-colors
 					{$activeTabId === tab.id
-					? 'border-l-2 border-[var(--accent-color)] bg-[var(--hover-bg)] text-[var(--text-primary)]'
-					: 'border-l-2 border-transparent text-[var(--text-secondary)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]'}"
+					? 'border-l-2 border-(--accent-color) bg-(--hover-bg) text-(--text-primary)'
+					: 'border-l-2 border-transparent text-(--text-secondary) hover:bg-(--hover-bg) hover:text-(--text-primary)'}"
 			>
 				<button
 					onclick={() => selectTab(tab.id)}
@@ -149,7 +149,7 @@
 							onblur={saveTabName}
 							onkeydown={handleKeydown}
 							onclick={(e) => e.stopPropagation()}
-							class="w-full border-0 bg-transparent p-0 text-sm text-[var(--text-primary)] focus:ring-0"
+							class="w-full border-0 bg-transparent p-0 text-sm text-(--text-primary) focus:ring-0"
 							autofocus
 						/>
 					{:else}
@@ -184,12 +184,12 @@
 
 {#if contextMenuTab}
 	<div
-		class="fixed z-50 min-w-[120px] rounded border border-[var(--border-color)] bg-[var(--bg-secondary)] py-1 shadow-lg"
+		class="fixed z-50 min-w-[120px] rounded border border-(--border-color) bg-(--bg-secondary) py-1 shadow-lg"
 		style="left: {contextMenuPosition.x}px; top: {contextMenuPosition.y}px;"
 	>
 		<button
 			onclick={() => renameTab(contextMenuTab!)}
-			class="flex w-full items-center px-3 py-2 text-left text-sm text-[var(--text-primary)] hover:bg-[var(--hover-bg)]"
+			class="flex w-full items-center px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--hover-bg)"
 		>
 			Rename
 		</button>

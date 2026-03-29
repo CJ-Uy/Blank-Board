@@ -1,15 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
-	if (!locals.user) {
-		error(401, 'Unauthorized');
-	}
+	if (!locals.user) error(401, 'Unauthorized');
 
-	const tabs = await db
+	const tabs = await locals.db
 		.select({
 			id: table.tab.id,
 			name: table.tab.name,
@@ -24,20 +21,16 @@ export const GET: RequestHandler = async ({ locals }) => {
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {
-	if (!locals.user) {
-		error(401, 'Unauthorized');
-	}
+	if (!locals.user) error(401, 'Unauthorized');
 
-	const body = await request.json();
+	const body = await request.json() as { id?: string; name?: string; content?: string; order?: number };
 	const { id, name, content, order } = body;
 
-	if (!id || typeof id !== 'string') {
-		error(400, 'Invalid tab ID');
-	}
+	if (!id || typeof id !== 'string') error(400, 'Invalid tab ID');
 
 	const now = new Date();
 
-	await db.insert(table.tab).values({
+	await locals.db.insert(table.tab).values({
 		id,
 		userId: locals.user.id,
 		name: name ?? 'Untitled',
@@ -47,8 +40,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		updatedAt: now
 	});
 
-	// Update user's last active timestamp
-	await db
+	await locals.db
 		.update(table.user)
 		.set({ lastActiveAt: now })
 		.where(eq(table.user.id, locals.user.id));

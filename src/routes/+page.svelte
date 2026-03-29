@@ -71,18 +71,18 @@
 </svelte:head>
 
 <div
-	class="flex h-screen flex-col bg-[var(--bg-primary)]"
+	class="flex h-screen flex-col bg-(--bg-primary)"
 	style="font-family: 'IBM Plex Sans', sans-serif;"
 >
 	<!-- Header -->
 	<header
-		class="flex h-14 items-center justify-between border-b border-[var(--border-color)] bg-[var(--bg-secondary)] px-4 md:px-6"
+		class="flex h-14 items-center justify-between border-b border-(--border-color) bg-(--bg-secondary) px-4 md:px-6"
 	>
 		<div class="flex items-center gap-2 md:gap-3">
 			<!-- Left sidebar toggle -->
 			<button
 				onclick={toggleLeftSidebar}
-				class="flex h-8 w-8 items-center justify-center rounded text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] md:hidden"
+				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary) md:hidden"
 				title="Toggle tabs"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@
 				</svg>
 			</button>
 
-			<h1 class="text-lg font-light tracking-tight text-[var(--text-primary)]">Blank Board</h1>
+			<h1 class="text-lg font-light tracking-tight text-(--text-primary)">Blank Board</h1>
 			{#if $connected}
 				<span class="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
 					<span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
@@ -108,7 +108,7 @@
 			<!-- Theme toggle -->
 			<button
 				onclick={() => theme.toggle()}
-				class="flex h-8 w-8 items-center justify-center rounded text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)]"
+				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary)"
 				title="Toggle theme ({$theme})"
 			>
 				{#if $theme === 'light'}
@@ -141,13 +141,14 @@
 				{/if}
 			</button>
 
-			<span class="hidden text-sm text-[var(--text-secondary)] sm:inline">{data.user?.username}</span
+			<span class="hidden font-mono text-xs text-(--text-secondary) sm:inline"
+				title={data.user?.id}>{data.user?.id.slice(0, 8)}</span
 			>
 
 			<form method="POST" action="/logout" use:enhance>
 				<button
 					type="submit"
-					class="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-[var(--text-primary)] hover:underline"
+					class="text-sm text-(--text-secondary) underline-offset-2 hover:text-(--text-primary) hover:underline"
 				>
 					Logout
 				</button>
@@ -156,7 +157,7 @@
 			<!-- Right sidebar toggle -->
 			<button
 				onclick={toggleRightSidebar}
-				class="flex h-8 w-8 items-center justify-center rounded text-[var(--text-secondary)] transition-colors hover:bg-[var(--hover-bg)] hover:text-[var(--text-primary)] md:hidden"
+				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary) md:hidden"
 				title="Toggle calendar"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +195,7 @@
 		</div>
 
 		<!-- Content editor -->
-		<main class="flex-1 overflow-hidden bg-[var(--bg-secondary)]">
+		<main class="flex-1 overflow-hidden bg-(--bg-secondary)">
 			<ContentEditor />
 		</main>
 

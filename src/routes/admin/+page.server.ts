@@ -1,26 +1,21 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { count, sql } from 'drizzle-orm';
-import { db } from '$lib/server/db';
+import { createDb } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, platform }) => {
 	const adminSession = cookies.get('admin-session');
+	if (!adminSession) return { authenticated: false };
 
-	if (!adminSession) {
-		return { authenticated: false };
-	}
+	const db = createDb(platform!.env.DB);
 
-	// Fetch stats
 	const [userCount] = await db.select({ count: count() }).from(table.user);
 	const [tabCount] = await db.select({ count: count() }).from(table.tab);
 
-	// Get users with tab counts
 	const users = await db
 		.select({
 			id: table.user.id,
-			username: table.user.username,
 			createdAt: table.user.createdAt,
 			lastActiveAt: table.user.lastActiveAt,
 			tabCount: sql<number>`(SELECT COUNT(*) FROM tab WHERE tab.user_id = ${table.user.id})`
@@ -28,61 +23,42 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		.from(table.user)
 		.orderBy(table.user.lastActiveAt);
 
-	// Get database size from PostgreSQL
-	let dbSize = 0;
-	try {
-		const result = await db.execute(sql`SELECT pg_database_size(current_database()) as size`);
-		if (result.length > 0 && result[0].size) {
-			dbSize = Number(result[0].size);
-		}
-	} catch {
-		// Unable to get database size
-	}
-
-	// Get connected clients (from global if available)
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const g = globalThis as any;
-	const connectedClients = typeof g.getConnectedClients === 'function' ? g.getConnectedClients() : 0;
-
 	return {
 		authenticated: true,
 		stats: {
 			totalUsers: userCount.count,
-			totalTabs: tabCount.count,
-			connectedClients,
-			dbSize
+			totalTabs: tabCount.count
 		},
 		users: users.map((u) => ({
 			...u,
-			createdAt: u.createdAt.toISOString(),
-			lastActiveAt: u.lastActiveAt.toISOString()
+			createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : String(u.createdAt),
+			lastActiveAt: u.lastActiveAt instanceof Date ? u.lastActiveAt.toISOString() : String(u.lastActiveAt)
 		}))
 	};
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies }) => {
-		const formData = await request.formData();
-		const username = formData.get('username')?.toString().trim();
-		const password = formData.get('password')?.toString();
+	login: async ({ request, cookies, platform }) => {
+		const data = await request.formData();
+		const username = data.get('username')?.toString().trim();
+		const password = data.get('password')?.toString();
 
 		if (!username || !password) {
 			return fail(400, { message: 'Username and password are required' });
 		}
 
-		const adminUsername = env.ADMIN_USERNAME || 'admin';
-		const adminPassword = env.ADMIN_PASSWORD || 'changeme';
+		const adminUsername = platform?.env?.ADMIN_USERNAME ?? 'admin';
+		const adminPassword = platform?.env?.ADMIN_PASSWORD ?? 'changeme';
 
 		if (username !== adminUsername || password !== adminPassword) {
 			return fail(400, { message: 'Invalid credentials' });
 		}
 
-		// Set a simple session cookie
 		cookies.set('admin-session', 'authenticated', {
 			path: '/admin',
 			httpOnly: true,
 			sameSite: 'strict',
-			maxAge: 60 * 60 * 24 // 24 hours
+			maxAge: 60 * 60 * 24
 		});
 
 		return { success: true };

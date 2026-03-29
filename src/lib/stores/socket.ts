@@ -1,78 +1,88 @@
 import { writable } from 'svelte/store';
-import { io, type Socket } from 'socket.io-client';
 import { browser } from '$app/environment';
 import { boardStore, type ClientTab } from './board';
 
 export const connected = writable(false);
 
-let socket: Socket | null = null;
+let ws: WebSocket | null = null;
 
-export function initSocket(userId: string) {
-	if (!browser || socket) return;
+export function initSocket(_userId: string) {
+	if (!browser || ws) return;
 
-	socket = io({
-		autoConnect: true,
-		reconnection: true,
-		reconnectionDelay: 1000,
-		reconnectionAttempts: 5
-	});
+	function connect() {
+		const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+		ws = new WebSocket(`${protocol}://${location.host}/api/sync`);
 
-	socket.on('connect', () => {
-		connected.set(true);
-		socket?.emit('join', userId);
-	});
+		ws.addEventListener('open', () => connected.set(true));
+		ws.addEventListener('close', () => {
+			connected.set(false);
+			ws = null;
+			// Reconnect after 2 seconds
+			setTimeout(connect, 2000);
+		});
+		ws.addEventListener('error', () => {
+			ws?.close();
+		});
 
-	socket.on('disconnect', () => {
-		connected.set(false);
-	});
+		ws.addEventListener('message', (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+				switch (msg.type) {
+					case 'tab:create':
+						boardStore.addTab(msg.payload as ClientTab);
+						break;
+					case 'tab:update':
+						boardStore.updateTab(msg.payload.id, msg.payload);
+						break;
+					case 'tab:delete':
+						boardStore.removeTab(msg.payload as string);
+						break;
+					case 'content:update':
+						boardStore.updateTab(msg.payload.tabId, { content: msg.payload.content });
+						break;
+					case 'tabs:reorder':
+						boardStore.reorderTabs(msg.payload as ClientTab[]);
+						break;
+				}
+			} catch {
+				// ignore malformed messages
+			}
+		});
+	}
 
-	socket.on('tab:create', (tab: ClientTab) => {
-		boardStore.addTab(tab);
-	});
+	connect();
+}
 
-	socket.on('tab:update', (data: { id: string; name?: string; content?: string }) => {
-		boardStore.updateTab(data.id, { name: data.name, content: data.content });
-	});
-
-	socket.on('tab:delete', (tabId: string) => {
-		boardStore.removeTab(tabId);
-	});
-
-	socket.on('content:update', (data: { tabId: string; content: string }) => {
-		boardStore.updateTab(data.tabId, { content: data.content });
-	});
-
-	socket.on('tabs:reorder', (tabs: ClientTab[]) => {
-		boardStore.reorderTabs(tabs);
-	});
-
-	return socket;
+function send(type: string, payload: unknown) {
+	if (ws?.readyState === WebSocket.OPEN) {
+		ws.send(JSON.stringify({ type, payload }));
+	}
 }
 
 export function emitTabCreate(tab: ClientTab) {
-	socket?.emit('tab:create', tab);
+	send('tab:create', tab);
 }
 
 export function emitTabUpdate(id: string, updates: { name?: string; content?: string }) {
-	socket?.emit('tab:update', { id, ...updates });
+	send('tab:update', { id, ...updates });
 }
 
 export function emitTabDelete(tabId: string) {
-	socket?.emit('tab:delete', tabId);
+	send('tab:delete', tabId);
 }
 
 export function emitContentUpdate(tabId: string, content: string) {
-	socket?.emit('content:update', { tabId, content });
+	send('content:update', { tabId, content });
 }
 
 export function emitTabsReorder(tabs: ClientTab[]) {
-	socket?.emit('tabs:reorder', tabs);
+	send('tabs:reorder', tabs);
 }
 
 export function disconnectSocket() {
-	if (socket) {
-		socket.disconnect();
-		socket = null;
+	if (ws) {
+		ws.close();
+		ws = null;
 		connected.set(false);
 	}
 }
