@@ -145,7 +145,7 @@
 				title={data.user?.id}>{data.user?.id.slice(0, 8)}</span
 			>
 
-			<form method="POST" action="/logout" use:enhance>
+			<form method="POST" action="/logout">
 				<button
 					type="submit"
 					class="text-sm text-(--text-secondary) underline-offset-2 hover:text-(--text-primary) hover:underline"

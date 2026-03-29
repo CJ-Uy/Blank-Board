@@ -87,9 +87,20 @@
 	// 9 plain buttons, no symbols — positions match numpad layout (7-8-9 / 4-5-6 / 1-2-3)
 	const BUTTON_COUNT = 9;
 	let patternB = $state<number[]>([]);
+	let flashedTile = $state<number | null>(null);
+
+	const readyA = $derived(patternA.length >= 3);
+	const readyB = $derived(patternB.length === 5);
 
 	function tapTile(idx: number) {
-		if (patternB.length < 5) patternB = [...patternB, idx];
+		if (patternB.length >= 5) return;
+		patternB = [...patternB, idx];
+		flashedTile = idx;
+		setTimeout(() => { flashedTile = null; }, 150);
+	}
+
+	function goToLayerB() {
+		if (readyA) layer = 'B';
 	}
 
 	// ─── Keyboard input (numpad) ──────────────────────────────────────────────────
@@ -111,13 +122,6 @@
 
 	function encode(indices: number[]): string {
 		return indices.map((i) => INDEX_TO_NUM[i]).join('-');
-	}
-
-	const readyA = $derived(patternA.length >= 3);
-	const readyB = $derived(patternB.length === 5);
-
-	function goToLayerB() {
-		if (readyA) layer = 'B';
 	}
 
 	function goBackToLayerA() {
@@ -270,11 +274,11 @@
 								aria-label="Button {i + 1}"
 								onclick={() => tapTile(i)}
 								disabled={patternB.length >= 5}
-								class="aspect-square rounded-lg border border-(--border-color)
-									bg-(--bg-secondary)
-									transition-all active:scale-95
-									hover:border-(--accent-color) hover:bg-(--accent-color)/10
-									disabled:cursor-not-allowed disabled:opacity-40"
+								class="aspect-square rounded-lg border transition-all active:scale-95
+									disabled:cursor-not-allowed disabled:opacity-40
+									{flashedTile === i
+										? 'border-(--accent-color) bg-(--accent-color) scale-95'
+										: 'border-(--border-color) bg-(--bg-secondary) hover:border-(--accent-color) hover:bg-(--accent-color)/10'}"
 							></button>
 						{/each}
 					</div>
