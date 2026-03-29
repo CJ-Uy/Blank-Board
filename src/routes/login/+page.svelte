@@ -221,7 +221,7 @@
 					onclick={goToLayerB}
 					disabled={!readyA}
 					class="w-full rounded-lg bg-(--accent-color) py-3 text-sm font-medium
-						text-white transition-opacity hover:opacity-90
+						text-(--bg-primary) transition-opacity hover:opacity-90
 						disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					Continue
@@ -249,7 +249,7 @@
 						{#each Array(5) as _, i (i)}
 							<div class="flex h-8 flex-1 items-center justify-center rounded text-xs
 								{i < patternB.length
-								? 'bg-(--accent-color) text-white'
+								? 'bg-(--accent-color) text-(--bg-primary)'
 								: 'border border-(--border-color) text-(--text-muted)'}">
 								{i < patternB.length ? '·' : ''}
 							</div>
@@ -282,7 +282,7 @@
 					type="submit"
 					disabled={!readyB}
 					class="w-full rounded-lg bg-(--accent-color) py-3 text-sm font-medium
-						text-white transition-opacity hover:opacity-90
+						text-(--bg-primary) transition-opacity hover:opacity-90
 						disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					Enter
