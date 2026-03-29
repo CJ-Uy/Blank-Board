@@ -26,6 +26,7 @@
 	let dragging = $state(false);
 	let mousePos = $state({ x: 0, y: 0 });
 	let svgRef = $state<SVGSVGElement | null>(null);
+	let formRef = $state<HTMLFormElement | null>(null);
 
 	function svgCoords(e: MouseEvent | Touch): { x: number; y: number } {
 		const pt = svgRef!.createSVGPoint();
@@ -93,6 +94,11 @@
 
 	// ─── Keyboard input (numpad) ──────────────────────────────────────────────────
 	function handleKeydown(e: KeyboardEvent) {
+		if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+			if (layer === 'A' && readyA) { e.preventDefault(); goToLayerB(); return; }
+			if (layer === 'B' && readyB) { e.preventDefault(); formRef?.requestSubmit(); return; }
+			return;
+		}
 		const idx = NUMPAD_TO_INDEX[e.code];
 		if (idx === undefined) return;
 		e.preventDefault();
@@ -136,7 +142,7 @@
 			{layer === 'A' ? 'Draw your pattern to continue' : 'Enter your second pattern'}
 		</p>
 
-		<form method="POST" use:enhance class="space-y-6">
+		<form bind:this={formRef} method="POST" use:enhance class="space-y-6">
 			<input type="hidden" name="patternA" value={encode(patternA)} />
 			<input type="hidden" name="patternB" value={encode(patternB)} />
 

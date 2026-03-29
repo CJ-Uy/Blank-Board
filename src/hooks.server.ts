@@ -17,7 +17,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// Validate session from KV
-	const kv = event.platform?.env?.SESSIONS;
+	const kv = event.platform?.env?.CACHE;
 	const token = event.cookies.get(auth.sessionCookieName);
 
 	if (!token || !kv || !event.locals.db) {

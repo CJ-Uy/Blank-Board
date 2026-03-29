@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	default: async ({ request, cookies, platform }) => {
 		const db = createDb(platform!.env.DB);
-		const kv = platform!.env.SESSIONS;
+		const kv = platform!.env.CACHE;
 
 		const data = await request.formData();
 		const patternA = data.get('patternA')?.toString().trim() ?? '';
