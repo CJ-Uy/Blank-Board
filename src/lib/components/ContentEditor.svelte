@@ -19,7 +19,6 @@
 			body: JSON.stringify({ content })
 		});
 
-		emitContentUpdate(tabId, content);
 		lastSavedContent = content;
 	}, 500);
 
@@ -28,6 +27,7 @@
 
 		const content = editorRef.innerHTML;
 		boardStore.updateTab($activeTab.id, { content });
+		emitContentUpdate($activeTab.id, content);
 		saveContent($activeTab.id, content);
 	}
 
