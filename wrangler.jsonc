@@ -50,7 +50,7 @@
 		"bindings": [
 			{
 				"name": "USER_SYNC",
-				"class_name": "blank_board"
+				"class_name": "UserSync"
 			}
 		]
 	},
@@ -58,7 +58,7 @@
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["blank_board"]
+			"new_classes": ["UserSync"]
 		}
 	]
 }
