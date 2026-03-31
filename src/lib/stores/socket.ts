@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 import { get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { boardStore, type ClientTab } from './board';
+import { dropStore, type ClientDrop } from './drops';
 
 export const connected = writable(false);
 
@@ -84,6 +85,12 @@ export function initSocket(_userId: string) {
 					case 'tabs:reorder':
 						boardStore.reorderTabs(msg.payload as ClientTab[]);
 						break;
+					case 'drop:create':
+						dropStore.addDrop(msg.payload as ClientDrop);
+						break;
+					case 'drop:delete':
+						dropStore.removeDrop(msg.payload as string);
+						break;
 				}
 			} catch { /* ignore malformed messages */ }
 		});
@@ -107,6 +114,8 @@ export function emitContentUpdate(tabId: string, content: string) {
 	send('content:update', { tabId, content });
 }
 export function emitTabsReorder(tabs: ClientTab[]) { send('tabs:reorder', tabs); }
+export function emitDropCreate(drop: ClientDrop) { send('drop:create', drop); }
+export function emitDropDelete(dropId: string) { send('drop:delete', dropId); }
 
 export function disconnectSocket() {
 	if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }

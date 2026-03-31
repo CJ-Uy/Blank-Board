@@ -67,8 +67,23 @@ export const DELETE: RequestHandler = async ({ params, locals, platform }) => {
 
 	if (!existing) error(404, 'Tab not found');
 
-	if (platform?.env?.FILES && existing.content) {
-		await Promise.all([...extractFileKeys(existing.content)].map(k => deleteFile(platform.env.FILES, k)));
+	if (platform?.env?.FILES) {
+		// Clean up note inline files
+		if (existing.content) {
+			await Promise.all([...extractFileKeys(existing.content)].map(k => deleteFile(platform.env!.FILES, k)));
+		}
+
+		// Clean up drop files attached to this tab
+		const drops = await locals.db
+			.select({ fileUrl: table.drop.fileUrl })
+			.from(table.drop)
+			.where(eq(table.drop.tabId, params.id));
+
+		const dropKeys = drops
+			.filter(d => d.fileUrl)
+			.map(d => d.fileUrl!.replace(/^\/files\//, ''));
+
+		await Promise.all(dropKeys.map(k => deleteFile(platform.env!.FILES, k)));
 	}
 
 	await locals.db.delete(table.tab).where(eq(table.tab.id, params.id));

@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import TabList from '$lib/components/TabList.svelte';
 	import ContentEditor from '$lib/components/ContentEditor.svelte';
-	import Calendar from '$lib/components/Calendar.svelte';
+	import DropsSidebar from '$lib/components/DropsSidebar.svelte';
 	import { boardStore } from '$lib/stores/board';
 	import { initSocket, disconnectSocket, connected } from '$lib/stores/socket';
 	import { theme } from '$lib/stores/theme';
@@ -158,7 +158,7 @@
 			<button
 				onclick={toggleRightSidebar}
 				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary) md:hidden"
-				title="Toggle calendar"
+				title="Toggle drops"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -199,12 +199,12 @@
 			<ContentEditor />
 		</main>
 
-		<!-- Calendar sidebar -->
+		<!-- Drops sidebar -->
 		<div
 			class="absolute right-0 top-0 z-20 h-full transform transition-transform duration-200 md:relative md:translate-x-0
 				{rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}"
 		>
-			<Calendar />
+			<DropsSidebar />
 		</div>
 	</div>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
 	import { boardStore, type ClientTab } from '$lib/stores/board';
 	import { emitTabCreate, emitTabDelete, emitTabUpdate } from '$lib/stores/socket';
 	import { generateId } from '$lib/utils';
@@ -103,6 +104,42 @@
 			editingName = tab.name;
 		}
 	}
+
+	// Calendar / clock
+	let now = $state(new Date());
+	let clockInterval: ReturnType<typeof setInterval>;
+
+	const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+	const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+	const currentDay = $derived(now.getDate());
+	const currentMonth = $derived(now.getMonth());
+	const currentYear = $derived(now.getFullYear());
+	const monthName = $derived(monthNames[currentMonth]);
+	const time = $derived(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+
+	const calendarDays = $derived.by(() => {
+		const firstDay = new Date(currentYear, currentMonth, 1);
+		const lastDay = new Date(currentYear, currentMonth + 1, 0);
+		const daysInMonth = lastDay.getDate();
+		const startingDay = firstDay.getDay();
+		const days: { day: number; isCurrentMonth: boolean; isToday: boolean }[] = [];
+		const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+		for (let i = startingDay - 1; i >= 0; i--) {
+			days.push({ day: prevMonthLastDay - i, isCurrentMonth: false, isToday: false });
+		}
+		for (let i = 1; i <= daysInMonth; i++) {
+			days.push({ day: i, isCurrentMonth: true, isToday: i === currentDay });
+		}
+		const remaining = 42 - days.length;
+		for (let i = 1; i <= remaining; i++) {
+			days.push({ day: i, isCurrentMonth: false, isToday: false });
+		}
+		return days;
+	});
+
+	onMount(() => { clockInterval = setInterval(() => { now = new Date(); }, 1000); });
+	onDestroy(() => { if (clockInterval) clearInterval(clockInterval); });
 </script>
 
 <svelte:window onclick={hideContextMenu} />
@@ -128,7 +165,7 @@
 		</button>
 	</div>
 
-	<nav class="flex-1 overflow-y-auto py-2">
+	<nav class="overflow-y-auto py-2 min-h-0" style="flex: 1 1 0;">
 		{#each $sortedTabs as tab (tab.id)}
 			<div
 				class="group relative flex w-full items-center transition-colors
@@ -180,6 +217,28 @@
 			</div>
 		{/each}
 	</nav>
+
+	<!-- Calendar + clock -->
+	<div class="shrink-0 border-t border-(--border-color) px-3 py-3">
+		<div class="mb-1.5 flex items-baseline gap-1">
+			<span class="text-xs font-medium text-(--text-primary)">{monthName}</span>
+			<span class="text-xs text-(--text-muted)">{currentYear}</span>
+		</div>
+		<div class="mb-1 grid grid-cols-7">
+			{#each dayNames as d}
+				<div class="py-0.5 text-center text-[10px] font-medium text-(--text-muted)">{d}</div>
+			{/each}
+		</div>
+		<div class="grid grid-cols-7">
+			{#each calendarDays as { day, isCurrentMonth, isToday }}
+				<div class="flex h-6 w-full items-center justify-center text-[10px]
+					{isToday ? 'rounded-full bg-(--accent-color) font-medium text-(--bg-secondary)' : isCurrentMonth ? 'text-(--text-primary)' : 'text-(--text-muted)'}">
+					{day}
+				</div>
+			{/each}
+		</div>
+		<p class="mt-2 text-center font-mono text-base tabular-nums text-(--text-primary)">{time}</p>
+	</div>
 </div>
 
 {#if contextMenuTab}
