@@ -131,7 +131,7 @@
 	onMount(() => scrollToBottom());
 </script>
 
-<div class="flex h-full w-[220px] flex-col border-l border-(--border-color) bg-(--bg-secondary)">
+<div class="flex h-full w-70 flex-col border-l border-(--border-color) bg-(--bg-secondary)">
 	<!-- Header -->
 	<div class="flex h-10 shrink-0 items-center border-b border-(--border-color) px-3">
 		<span class="text-xs font-medium tracking-wide text-(--text-secondary) uppercase">Drops</span>
@@ -164,7 +164,7 @@
 				<button
 					onclick={confirmSendFile}
 					disabled={uploading}
-					class="flex-1 rounded bg-(--accent-color) px-2 py-1 text-xs text-white disabled:opacity-50"
+					class="flex-1 rounded bg-(--accent-color) px-2 py-1 text-xs text-(--bg-primary) disabled:opacity-50"
 				>
 					{uploading ? 'Sending…' : 'Send'}
 				</button>
@@ -179,16 +179,16 @@
 	{/if}
 
 	<!-- Input bar -->
-	<div class="shrink-0 border-t border-(--border-color) p-2">
-		<div class="flex items-end gap-1.5">
+	<div class="shrink-0 border-t border-(--border-color) p-3">
+		<div class="flex items-end gap-2">
 			<textarea
 				bind:value={textInput}
 				onkeydown={onKeyDown}
 				placeholder="Drop something…"
-				rows={1}
+				rows={2}
 				disabled={uploading || !!pendingFile}
-				class="flex-1 resize-none rounded-lg border border-(--border-color) bg-(--bg-primary) px-2.5 py-1.5 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:ring-1 focus:ring-(--accent-color) disabled:opacity-50"
-				style="font-family: inherit; max-height: 80px; overflow-y: auto;"
+				class="flex-1 resize-none rounded-lg border border-(--border-color) bg-(--bg-primary) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:ring-1 focus:ring-(--accent-color) disabled:opacity-50"
+				style="font-family: inherit; max-height: 120px; overflow-y: auto;"
 			></textarea>
 
 			<input
@@ -202,7 +202,7 @@
 			<button
 				onclick={() => fileInputEl?.click()}
 				disabled={uploading || !!pendingFile}
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-(--border-color) bg-(--bg-primary) text-(--text-secondary) hover:bg-(--hover-bg) hover:text-(--text-primary) disabled:opacity-50"
+				class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-(--border-color) bg-(--bg-primary) text-(--text-secondary) hover:bg-(--hover-bg) hover:text-(--text-primary) disabled:opacity-50"
 				title="Attach file"
 			>
 				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +213,7 @@
 			<button
 				onclick={sendText}
 				disabled={!textInput.trim() || uploading || !!pendingFile}
-				class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--accent-color) text-white hover:opacity-90 disabled:opacity-40"
+				class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-(--accent-color) text-(--bg-primary) hover:opacity-90 disabled:opacity-40"
 				title="Send"
 			>
 				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

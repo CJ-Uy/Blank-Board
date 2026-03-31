@@ -28,10 +28,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const { session, user } = await auth.validateSessionToken(token, kv, event.locals.db);
 
-	if (session) {
-		auth.setSessionTokenCookie(event, token);
-	} else {
-		auth.deleteSessionTokenCookie(event);
+	// WebSocket upgrade responses have immutable headers — skip cookie ops for them.
+	const isWebSocket = event.request.headers.get('upgrade')?.toLowerCase() === 'websocket';
+	if (!isWebSocket) {
+		if (session) {
+			auth.setSessionTokenCookie(event, token);
+		} else {
+			auth.deleteSessionTokenCookie(event);
+		}
 	}
 
 	event.locals.user = user;

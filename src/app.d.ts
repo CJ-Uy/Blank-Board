@@ -12,7 +12,7 @@ declare global {
 		interface Platform {
 			env: {
 				DB: D1Database;
-				SESSIONS: KVNamespace;
+				CACHE: KVNamespace;
 				FILES: R2Bucket;
 				USER_SYNC: DurableObjectNamespace;
 				ADMIN_USERNAME?: string;
