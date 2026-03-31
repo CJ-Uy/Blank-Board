@@ -11,9 +11,9 @@
 			<section>
 				<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-(--text-muted)">What it is</h2>
 				<p>
-					Blank Board is a minimal personal scratchpad that lives in your browser.
-					No sign-up, no email, no profile. Just a canvas for notes, ideas, and anything
-					you want to keep around.
+					Blank Board is a minimal personal scratchpad. No sign-up, no email, no profile.
+					Just a canvas for notes, ideas, and anything you want to keep around, available
+					on every device you use.
 				</p>
 			</section>
 
@@ -21,21 +21,23 @@
 				<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-(--text-muted)">How you log in</h2>
 				<p>
 					Instead of a password, you draw two patterns. Those patterns are combined and
-					hashed — the result becomes your unique identity on the server. The raw patterns
-					never leave your device.
+					hashed on your device before anything reaches the server. The resulting hash
+					becomes your permanent identity. The raw patterns never leave your browser.
 				</p>
 				<p class="mt-3">
-					Because there's no email or username, there's no recovery. Your patterns are
+					Because there is no email or username, there is no recovery. Your patterns are
 					your key. Keep them.
 				</p>
 			</section>
 
 			<section>
-				<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-(--text-muted)">Multi-device sync</h2>
+				<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-(--text-muted)">Real-time sync</h2>
 				<p>
-					Open Blank Board in multiple windows or tabs — changes sync in real time over
-					WebSockets. Your board stays consistent across every session as long as you use
-					the same patterns.
+					Open Blank Board in multiple windows or tabs and changes appear everywhere
+					instantly. Each account has a dedicated Cloudflare Durable Object that holds
+					all your active WebSocket connections and broadcasts updates between them the
+					moment they happen. If a connection drops, the client reconnects automatically
+					and catches up.
 				</p>
 			</section>
 
@@ -43,7 +45,7 @@
 				<h2 class="mb-2 text-xs font-medium uppercase tracking-wider text-(--text-muted)">Privacy</h2>
 				<p>
 					No analytics, no trackers, no ads. The server stores a hash of your patterns
-					and the content of your tabs — nothing else.
+					and the content of your tabs. Nothing else.
 				</p>
 			</section>
 		</div>
