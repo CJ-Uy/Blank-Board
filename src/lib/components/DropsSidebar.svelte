@@ -67,7 +67,7 @@
 			form.append('file', file);
 			const uploadRes = await fetch('/api/upload', { method: 'POST', body: form });
 			if (!uploadRes.ok) return;
-			const { url } = await uploadRes.json();
+			const { url } = await uploadRes.json() as { url: string };
 
 			const type = getMimeCategory(file.type);
 			const res = await fetch('/api/drops', {
@@ -179,16 +179,16 @@
 	{/if}
 
 	<!-- Input bar -->
-	<div class="shrink-0 border-t border-(--border-color) p-3">
-		<div class="flex items-end gap-2">
+	<div class="shrink-0 border-t border-(--border-color) p-2">
+		<div class="flex items-center gap-1.5">
 			<textarea
 				bind:value={textInput}
 				onkeydown={onKeyDown}
 				placeholder="Drop something…"
-				rows={2}
+				rows={1}
 				disabled={uploading || !!pendingFile}
-				class="flex-1 resize-none rounded-lg border border-(--border-color) bg-(--bg-primary) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:ring-1 focus:ring-(--accent-color) disabled:opacity-50"
-				style="font-family: inherit; max-height: 120px; overflow-y: auto;"
+				class="flex-1 resize-none rounded-lg border border-(--border-color) bg-(--bg-primary) px-2.5 py-1.5 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:outline-none focus:ring-1 focus:ring-(--accent-color) disabled:opacity-50"
+				style="font-family: inherit; max-height: 80px; overflow-y: auto;"
 			></textarea>
 
 			<input
