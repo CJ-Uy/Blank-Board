@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { boardStore } from '$lib/stores/board';
-	import { emitContentUpdate } from '$lib/stores/socket';
+	import { emitContentUpdate, markLocalEdit } from '$lib/stores/socket';
 	import { debounce } from '$lib/utils';
 
 	const activeTab = boardStore.activeTab;
@@ -28,6 +28,7 @@
 		const content = editorRef.innerHTML;
 		boardStore.updateTab($activeTab.id, { content });
 		emitContentUpdate($activeTab.id, content);
+		markLocalEdit();
 		saveContent($activeTab.id, content);
 	}
 
