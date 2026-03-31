@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 interface SyncMessage {
-	type: 'tab:create' | 'tab:update' | 'tab:delete' | 'content:update' | 'tabs:reorder';
+	type: 'tab:create' | 'tab:update' | 'tab:delete' | 'content:update' | 'tabs:reorder' | 'ping';
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	payload: any;
 }
@@ -41,6 +41,8 @@ export class UserSync implements DurableObject {
 		} catch {
 			return;
 		}
+
+		if (parsed.type === 'ping') return;
 
 		// Broadcast to all other connected sockets
 		for (const socket of this.sockets) {

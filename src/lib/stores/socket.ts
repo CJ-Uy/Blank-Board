@@ -5,6 +5,18 @@ import { boardStore, type ClientTab } from './board';
 export const connected = writable(false);
 
 let ws: WebSocket | null = null;
+let pingTimer: ReturnType<typeof setInterval> | null = null;
+let reconnectDelay = 300;
+
+async function syncTabsFromServer() {
+	try {
+		const res = await fetch('/api/tabs');
+		if (res.ok) {
+			const tabs = await res.json();
+			boardStore.setTabs(tabs);
+		}
+	} catch { /* ignore */ }
+}
 
 export function initSocket(_userId: string) {
 	if (!browser || ws) return;
@@ -13,12 +25,22 @@ export function initSocket(_userId: string) {
 		const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
 		ws = new WebSocket(`${protocol}://${location.host}/api/sync`);
 
-		ws.addEventListener('open', () => connected.set(true));
+		ws.addEventListener('open', () => {
+			connected.set(true);
+			reconnectDelay = 300;
+			// Keep connection alive — Cloudflare drops idle WS connections
+			pingTimer = setInterval(() => {
+				if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+			}, 20_000);
+			// Catch up on anything missed while disconnected
+			syncTabsFromServer();
+		});
 		ws.addEventListener('close', () => {
 			connected.set(false);
 			ws = null;
-			// Reconnect after 2 seconds
-			setTimeout(connect, 2000);
+			if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+			setTimeout(connect, reconnectDelay);
+			reconnectDelay = Math.min(reconnectDelay * 2, 8000);
 		});
 		ws.addEventListener('error', () => {
 			ws?.close();
@@ -80,6 +102,7 @@ export function emitTabsReorder(tabs: ClientTab[]) {
 }
 
 export function disconnectSocket() {
+	if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
 	if (ws) {
 		ws.close();
 		ws = null;
