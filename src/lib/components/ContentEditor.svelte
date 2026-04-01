@@ -8,6 +8,11 @@
 	let editorRef = $state<HTMLDivElement | null>(null);
 	let lastSavedContent = $state('');
 
+	// Track the last tab the user typed in and when, so WS echo-backs
+	// don't overwrite innerHTML and teleport the cursor.
+	let lastTypedTabId = '';
+	let lastTypedAt = 0;
+
 	const saveContent = debounce(async (tabId: string, content: string) => {
 		if (content === lastSavedContent) return;
 
@@ -23,6 +28,9 @@
 	function handleInput() {
 		if (!$activeTab || !editorRef) return;
 
+		lastTypedTabId = $activeTab.id;
+		lastTypedAt = Date.now();
+
 		const content = editorRef.innerHTML;
 		boardStore.updateTab($activeTab.id, { content });
 		emitContentUpdate($activeTab.id, content);
@@ -30,10 +38,13 @@
 		saveContent($activeTab.id, content);
 	}
 
-	// Update editor content when active tab changes
+	// Apply remote content updates to the editor, but never while the user
+	// is actively typing in this tab (suppresses WS echo-back cursor jumps).
 	$effect(() => {
 		if (editorRef && $activeTab) {
-			if (editorRef.innerHTML !== $activeTab.content) {
+			const userIsTypingHere =
+				$activeTab.id === lastTypedTabId && Date.now() - lastTypedAt < 1000;
+			if (!userIsTypingHere && editorRef.innerHTML !== $activeTab.content) {
 				editorRef.innerHTML = $activeTab.content;
 				lastSavedContent = $activeTab.content;
 			}
