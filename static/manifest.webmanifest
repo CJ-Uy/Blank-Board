@@ -1,0 +1,17 @@
+{
+	"name": "Blank Board",
+	"short_name": "Blank Board",
+	"description": "A minimal personal scratchpad",
+	"start_url": "/",
+	"display": "standalone",
+	"background_color": "#fafafa",
+	"theme_color": "#1a1a1a",
+	"icons": [
+		{
+			"src": "/favicon.webp",
+			"sizes": "any",
+			"type": "image/webp",
+			"purpose": "any"
+		}
+	]
+}

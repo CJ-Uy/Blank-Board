@@ -1,5 +1,5 @@
 import { json, error } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import * as table from '$lib/server/db/schema';
 import type { RequestHandler } from './$types';
 
@@ -18,6 +18,24 @@ export const GET: RequestHandler = async ({ locals }) => {
 		.orderBy(table.tab.order);
 
 	return json(tabs);
+};
+
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) error(401, 'Unauthorized');
+
+	const body = (await request.json()) as { id: string; order: number }[];
+	if (!Array.isArray(body)) error(400, 'Expected array');
+
+	await Promise.all(
+		body.map(({ id, order }) =>
+			locals.db
+				.update(table.tab)
+				.set({ order })
+				.where(and(eq(table.tab.id, id), eq(table.tab.userId, locals.user!.id)))
+		)
+	);
+
+	return json({ success: true });
 };
 
 export const POST: RequestHandler = async ({ request, locals }) => {

@@ -39,9 +39,7 @@ async function syncTabsFromServer() {
 
 export function initSocket(_userId: string) {
 	if (!browser || ws) return;
-
-	// Poll every 3 s as a reliable fallback when WebSocket drops or stalls.
-	pollTimer = setInterval(syncTabsFromServer, 3000);
+	connect();
 
 	function connect() {
 		const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -50,6 +48,8 @@ export function initSocket(_userId: string) {
 		ws.addEventListener('open', () => {
 			connected.set(true);
 			reconnectDelay = 300;
+			// WS is up — stop the fallback poll to avoid redundant D1 reads.
+			if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 			// Keep connection alive — Cloudflare drops idle WS connections.
 			pingTimer = setInterval(() => {
 				if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
@@ -61,6 +61,8 @@ export function initSocket(_userId: string) {
 			connected.set(false);
 			ws = null;
 			if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+			// WS dropped — start polling as fallback until reconnected.
+			if (!pollTimer) pollTimer = setInterval(syncTabsFromServer, 3000);
 			setTimeout(connect, reconnectDelay);
 			reconnectDelay = Math.min(reconnectDelay * 2, 8000);
 		});

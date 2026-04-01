@@ -55,3 +55,15 @@ body {
 *::-webkit-scrollbar-thumb:hover {
 	background-color: var(--text-secondary);
 }
+
+/* Prevent iOS/Android auto-zoom when focusing inputs (triggered when font-size < 16px) */
+@media screen and (max-width: 767px) {
+	input[type='text'],
+	input[type='search'],
+	input[type='email'],
+	input[type='password'],
+	textarea,
+	[contenteditable='true'] {
+		font-size: max(16px, 1em);
+	}
+}
