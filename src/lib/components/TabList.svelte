@@ -12,6 +12,8 @@
 
 	let editingTabId = $state<string | null>(null);
 	let editingName = $state('');
+	let creating = $state(false);
+	let errorMessage = $state('');
 
 	// Three-dots dropdown
 	let openMenuTabId = $state<string | null>(null);
@@ -32,8 +34,53 @@
 
 	const sortedTabs = boardStore.sortedTabs;
 	const activeTabId = boardStore.activeTabId;
+	let search = $state('');
+	let sort = $state('manual');
+	let searchInput: HTMLInputElement;
+	function plainText(html: string) {
+		if (typeof document === 'undefined') return '';
+		return (
+			new DOMParser()
+				.parseFromString(html, 'text/html')
+				.body.textContent?.replace(/\s+/g, ' ')
+				.trim() ?? ''
+		);
+	}
+	const visibleTabs = $derived.by(() => {
+		const query = search.trim().toLocaleLowerCase();
+		const result = $sortedTabs
+			.map((tab) => ({ ...tab, preview: plainText(tab.content) }))
+			.filter((tab) => !query || `${tab.name} ${tab.preview}`.toLocaleLowerCase().includes(query));
+		if (sort !== 'manual')
+			result.sort(
+				(a, b) =>
+					Number(!!b.pinned) - Number(!!a.pinned) ||
+					(sort === 'name'
+						? a.name.localeCompare(b.name)
+						: new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime())
+			);
+		return result;
+	});
+	async function togglePin(tab: ClientTab) {
+		try {
+			const pinned = !tab.pinned;
+			const response = await fetch(`/api/tabs/${tab.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ pinned })
+			});
+			if (!response.ok) throw new Error('Pin failed');
+			boardStore.updateTab(tab.id, { pinned });
+			emitTabUpdate(tab.id, { pinned });
+		} catch {
+			errorMessage = 'Could not update pin. Try again.';
+		}
+	}
 
 	async function createTab() {
+		if (creating) return;
+		creating = true;
+		errorMessage = '';
 		const newTab: ClientTab = {
 			id: generateId(),
 			name: 'Untitled',
@@ -41,16 +88,22 @@
 			order: $sortedTabs.length
 		};
 
-		boardStore.addTab(newTab);
+		try {
+			const response = await fetch('/api/tabs', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(newTab)
+			});
 
-		const response = await fetch('/api/tabs', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(newTab)
-		});
-
-		if (response.ok) {
-			emitTabCreate(newTab);
+			if (response.ok) {
+				boardStore.addTab(newTab);
+				emitTabCreate(newTab);
+				onTabSelect?.();
+			} else throw new Error('Create failed');
+		} catch {
+			errorMessage = 'Could not create tab. Try again.';
+		} finally {
+			creating = false;
 		}
 	}
 
@@ -67,18 +120,23 @@
 
 	async function saveTabName() {
 		if (!editingTabId) return;
+		const tabId = editingTabId;
+		editingTabId = null;
 
 		const trimmedName = editingName.trim() || 'Untitled';
-		boardStore.updateTab(editingTabId, { name: trimmedName });
+		try {
+			const response = await fetch(`/api/tabs/${tabId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: trimmedName })
+			});
 
-		await fetch(`/api/tabs/${editingTabId}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ name: trimmedName })
-		});
-
-		emitTabUpdate(editingTabId, { name: trimmedName });
-		editingTabId = null;
+			if (!response.ok) throw new Error('Rename failed');
+			boardStore.updateTab(tabId, { name: trimmedName });
+			emitTabUpdate(tabId, { name: trimmedName });
+		} catch {
+			errorMessage = 'Could not rename tab. Try again.';
+		}
 	}
 
 	function handleRenameKeydown(event: KeyboardEvent) {
@@ -107,13 +165,18 @@
 
 	async function deleteTab(tabId: string) {
 		closeMenu();
-		boardStore.removeTab(tabId);
+		if (!window.confirm('Delete this tab and all its drops? This cannot be undone.')) return;
+		try {
+			const response = await fetch(`/api/tabs/${tabId}`, {
+				method: 'DELETE'
+			});
 
-		await fetch(`/api/tabs/${tabId}`, {
-			method: 'DELETE'
-		});
-
-		emitTabDelete(tabId);
+			if (!response.ok) throw new Error('Delete failed');
+			boardStore.removeTab(tabId);
+			emitTabDelete(tabId);
+		} catch {
+			errorMessage = 'Could not delete tab. Try again.';
+		}
 	}
 
 	function renameTab(tabId: string) {
@@ -179,8 +242,18 @@
 	let clockInterval: ReturnType<typeof setInterval>;
 
 	const monthNames = [
-		'January', 'February', 'March', 'April', 'May', 'June',
-		'July', 'August', 'September', 'October', 'November', 'December'
+		'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December'
 	];
 	const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
@@ -227,15 +300,27 @@
 	});
 </script>
 
-<svelte:window onclick={closeMenu} />
+<svelte:window
+	onclick={closeMenu}
+	onkeydown={(event) => {
+		if (event.key === 'Escape') closeMenu();
+		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+			event.preventDefault();
+			searchInput?.focus();
+		}
+	}}
+/>
 
-<div class="flex h-full w-[200px] flex-col border-r border-(--border-color) bg-(--bg-secondary)">
+<div class="flex h-full w-[232px] flex-col border-r border-(--border-color) bg-(--bg-secondary)">
 	<div class="flex items-center justify-between border-b border-(--border-color) px-4 py-3">
-		<span class="text-xs font-medium tracking-wide uppercase text-(--text-secondary)">Tabs</span>
+		<span class="text-xs font-medium tracking-wide text-(--text-secondary) uppercase"
+			>Notes <span class="text-(--text-muted)">{$sortedTabs.length}</span></span
+		>
 		<button
 			onclick={createTab}
 			class="flex h-6 w-6 items-center justify-center text-(--text-muted) transition-colors hover:text-(--text-primary)"
 			title="New tab"
+			disabled={creating}
 		>
 			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
@@ -243,23 +328,43 @@
 			</svg>
 		</button>
 	</div>
+	<div class="space-y-2 px-3 py-3">
+		<input
+			bind:this={searchInput}
+			bind:value={search}
+			type="search"
+			aria-label="Search notes"
+			placeholder="Search notes…"
+			class="w-full rounded-lg border border-(--border-color) bg-(--bg-primary) px-2.5 py-2 text-xs"
+		/>
+		<div class="flex items-center justify-between text-[10px] text-(--text-secondary)">
+			<span>{search ? `${visibleTabs.length} found` : 'Pinned notes first'}</span><select
+				aria-label="Sort notes"
+				bind:value={sort}
+				class="max-w-28 rounded border-0 bg-transparent py-1 pr-5 pl-1 text-[10px]"
+				><option value="manual">My order</option><option value="recent">Recently edited</option
+				><option value="name">A–Z</option></select
+			>
+		</div>
+	</div>
 
-	<nav class="overflow-y-auto py-2 min-h-0" style="flex: 1 1 0;">
-		{#each $sortedTabs as tab (tab.id)}
+	{#if errorMessage}<p role="alert" class="px-3 py-2 text-xs text-red-600">{errorMessage}</p>{/if}
+	<nav class="min-h-0 overflow-y-auto py-2" style="flex: 1 1 0;" aria-label="Notes">
+		{#each visibleTabs as tab (tab.id)}
 			<div
-				class="group relative flex w-full select-none items-center transition-colors
+				class="group relative flex w-full items-center transition-colors select-none
 					{$activeTabId === tab.id
 					? 'border-l-2 border-(--accent-color) bg-(--hover-bg) text-(--text-primary)'
 					: 'border-l-2 border-transparent text-(--text-secondary) hover:bg-(--hover-bg) hover:text-(--text-primary)'}
 					{dragOverTabId === tab.id && draggedTabId !== tab.id ? 'border-t-2 border-t-(--accent-color)' : ''}"
 				role="listitem"
-				draggable="true"
+				draggable={!search && sort === 'manual'}
 				ondragstart={(e) => handleDragStart(tab.id, e)}
 				ondragover={(e) => handleDragOver(tab.id, e)}
 				ondragleave={handleDragLeave}
 				ondrop={(e) => handleDrop(tab.id, e)}
 				ondragend={handleDragEnd}
-				>
+			>
 				{#if editingTabId === tab.id}
 					<div class="flex-1 px-4 py-2">
 						<input
@@ -276,10 +381,20 @@
 					<button
 						onclick={() => selectTab(tab.id)}
 						ondblclick={() => startEditing(tab)}
+						aria-current={$activeTabId === tab.id ? 'page' : undefined}
 						class="min-w-0 flex-1 cursor-pointer px-4 py-2 text-left text-sm"
 					>
 						<span class="block truncate">{tab.name}</span>
+						<span class="mt-1 block truncate text-[10px] text-(--text-muted)"
+							>{tab.preview || 'An empty page'}</span
+						>
 					</button>
+					<button
+						class="h-8 w-7 shrink-0 text-sm text-(--text-muted) hover:text-(--text-primary)"
+						aria-label="{tab.pinned ? 'Unpin' : 'Pin'} {tab.name}"
+						aria-pressed={!!tab.pinned}
+						onclick={() => togglePin(tab)}>{tab.pinned ? '★' : '☆'}</button
+					>
 
 					<!-- Three-dots menu button -->
 					<div class="relative mr-2 shrink-0">
@@ -288,7 +403,7 @@
 							class="flex h-5 w-5 items-center justify-center rounded text-(--text-muted) transition-opacity hover:text-(--text-primary)
 								{openMenuTabId === tab.id
 								? 'opacity-100'
-								: 'opacity-0 group-hover:opacity-100'}"
+								: 'opacity-100 focus:opacity-100 md:opacity-0 md:group-hover:opacity-100'}"
 							title="Tab options"
 						>
 							<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
@@ -301,6 +416,9 @@
 				{/if}
 			</div>
 		{/each}
+		{#if !visibleTabs.length}<p class="px-4 py-6 text-center text-xs text-(--text-secondary)">
+				{search ? 'No matching notes. Try another word.' : 'Create your first note with + above.'}
+			</p>{/if}
 	</nav>
 
 	<!-- Calendar + clock -->
@@ -310,12 +428,12 @@
 			<span class="text-xs text-(--text-muted)">{currentYear}</span>
 		</div>
 		<div class="mb-1 grid grid-cols-7">
-			{#each dayNames as d}
+			{#each dayNames as d (d)}
 				<div class="py-0.5 text-center text-[10px] font-medium text-(--text-muted)">{d}</div>
 			{/each}
 		</div>
 		<div class="grid grid-cols-7">
-			{#each calendarDays as { day, isCurrentMonth, isToday }}
+			{#each calendarDays as { day, isCurrentMonth, isToday }, index (index)}
 				<div
 					class="flex h-6 w-full items-center justify-center text-[10px]
 						{isToday
@@ -328,7 +446,7 @@
 				</div>
 			{/each}
 		</div>
-		<p class="mt-2 text-center font-mono text-base tabular-nums text-(--text-primary)">{time}</p>
+		<p class="mt-2 text-center font-mono text-base text-(--text-primary) tabular-nums">{time}</p>
 	</div>
 </div>
 

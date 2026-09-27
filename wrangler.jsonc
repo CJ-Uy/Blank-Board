@@ -20,11 +20,12 @@
 	// Then replace YOUR_D1_DATABASE_ID below with the returned ID
 	// Migrations:
 	//   wrangler d1 migrations apply DB --local   (dev)
-	//   wrangler d1 migrations apply DB           (prod)
+	//   wrangler d1 migrations apply DB --remote  (prod)
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "blank-board",
+			"migrations_dir": "drizzle/migrations",
 			"database_id": "b6adff2d-3337-4180-9ffd-23d961bd4496"
 		}
 	],

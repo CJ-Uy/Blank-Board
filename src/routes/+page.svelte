@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { enhance } from '$app/forms';
 	import TabList from '$lib/components/TabList.svelte';
 	import ContentEditor from '$lib/components/ContentEditor.svelte';
 	import DropsSidebar from '$lib/components/DropsSidebar.svelte';
 	import DragDropOverlay from '$lib/components/DragDropOverlay.svelte';
+	import PomodoroTimer from '$lib/components/PomodoroTimer.svelte';
 	import { boardStore } from '$lib/stores/board';
 	import { initSocket, disconnectSocket, connected } from '$lib/stores/socket';
 	import { theme } from '$lib/stores/theme';
@@ -17,11 +17,12 @@
 	let isMobile = $state(false);
 
 	function checkMobile() {
-		isMobile = window.innerWidth < 768;
-		if (isMobile) {
-			leftSidebarOpen = false;
-			rightSidebarOpen = false;
+		const mobile = window.innerWidth < 768;
+		if (mobile !== isMobile) {
+			leftSidebarOpen = !mobile;
+			rightSidebarOpen = !mobile;
 		}
+		isMobile = mobile;
 	}
 
 	function toggleLeftSidebar() {
@@ -38,16 +39,10 @@
 		}
 	}
 
-	function getThemeIcon(currentTheme: string) {
-		if (currentTheme === 'light') return 'sun';
-		if (currentTheme === 'dark') return 'moon';
-		return 'system';
-	}
-
 	onMount(() => {
 		boardStore.setTabs(data.tabs);
 		if (data.user) {
-			initSocket(data.user.id);
+			initSocket();
 		}
 		checkMobile();
 		window.addEventListener('resize', checkMobile);
@@ -61,6 +56,15 @@
 	});
 </script>
 
+<svelte:window
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && isMobile) {
+			leftSidebarOpen = false;
+			rightSidebarOpen = false;
+		}
+	}}
+/>
+
 <svelte:head>
 	<title>Blank Board</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -72,12 +76,12 @@
 </svelte:head>
 
 <div
-	class="flex h-screen flex-col bg-(--bg-primary)"
+	class="flex h-dvh flex-col bg-(--bg-primary)"
 	style="font-family: 'IBM Plex Sans', sans-serif;"
 >
 	<!-- Header -->
 	<header
-		class="flex h-14 items-center justify-between border-b border-(--border-color) bg-(--bg-secondary) px-4 md:px-6"
+		class="flex h-14 shrink-0 items-center justify-between border-b border-(--border-color) bg-(--bg-secondary) px-4 md:px-6"
 	>
 		<div class="flex items-center gap-2 md:gap-3">
 			<!-- Left sidebar toggle -->
@@ -85,6 +89,8 @@
 				onclick={toggleLeftSidebar}
 				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary) md:hidden"
 				title="Toggle tabs"
+				aria-label="Toggle tabs"
+				aria-expanded={leftSidebarOpen}
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -96,16 +102,21 @@
 				</svg>
 			</button>
 
-			<h1 class="text-lg font-light tracking-tight text-(--text-primary)">Blank Board</h1>
+			<h1 class="text-base font-light tracking-tight text-(--text-primary) md:text-lg">
+				Blank Board
+			</h1>
 			{#if $connected}
 				<span class="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
 					<span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
 					<span class="hidden sm:inline">Live</span>
 				</span>
-			{/if}
+			{:else}<span class="hidden text-xs text-(--text-muted) sm:inline" role="status"
+					>Reconnecting…</span
+				>{/if}
 		</div>
 
 		<div class="flex items-center gap-2 md:gap-4">
+			{#if data.user}<PomodoroTimer userId={data.user.id} />{/if}
 			<!-- Theme toggle -->
 			<button
 				onclick={() => theme.toggle()}
@@ -142,8 +153,8 @@
 				{/if}
 			</button>
 
-			<span class="hidden font-mono text-xs text-(--text-secondary) sm:inline"
-				title={data.user?.id}>{data.user?.id.slice(0, 8)}</span
+			<span class="hidden font-mono text-xs text-(--text-secondary) lg:inline" title={data.user?.id}
+				>{data.user?.id.slice(0, 8)}</span
 			>
 
 			<form method="POST" action="/logout">
@@ -160,6 +171,8 @@
 				onclick={toggleRightSidebar}
 				class="flex h-8 w-8 items-center justify-center rounded text-(--text-secondary) transition-colors hover:bg-(--hover-bg) hover:text-(--text-primary) md:hidden"
 				title="Toggle drops"
+				aria-label="Toggle drops"
+				aria-expanded={rightSidebarOpen}
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -189,20 +202,22 @@
 
 		<!-- Tab sidebar -->
 		<div
-			class="absolute left-0 top-0 z-20 h-full transform transition-transform duration-200 md:relative md:translate-x-0
+			inert={isMobile && !leftSidebarOpen}
+			class="absolute top-0 left-0 z-20 h-full transform transition-transform duration-200 md:relative md:translate-x-0
 				{leftSidebarOpen ? 'translate-x-0' : '-translate-x-full'}"
 		>
 			<TabList onTabSelect={() => isMobile && (leftSidebarOpen = false)} />
 		</div>
 
 		<!-- Content editor -->
-		<main class="flex-1 overflow-hidden bg-(--bg-secondary)">
+		<main class="min-w-0 flex-1 overflow-hidden bg-(--bg-secondary)">
 			<ContentEditor />
 		</main>
 
 		<!-- Drops sidebar -->
 		<div
-			class="absolute right-0 top-0 z-20 h-full transform transition-transform duration-200 md:relative md:translate-x-0
+			inert={isMobile && !rightSidebarOpen}
+			class="absolute top-0 right-0 z-20 h-full transform transition-transform duration-200 md:relative md:translate-x-0
 				{rightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}"
 		>
 			<DropsSidebar />

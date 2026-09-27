@@ -48,9 +48,9 @@ function createThemeStore() {
 			set(theme);
 
 			// Listen for system theme changes
-			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+			window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
 				const currentTheme = localStorage.getItem('theme') as Theme;
-				if (currentTheme === 'system') {
+				if (!currentTheme || currentTheme === 'system') {
 					applyTheme('system');
 				}
 			});

@@ -18,7 +18,7 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply DB --local",
-		"db:migrate:prod": "wrangler d1 migrations apply DB",
+		"db:migrate:prod": "wrangler d1 migrations apply DB --remote",
 		"db:studio": "drizzle-kit studio"
 	},
 	"devDependencies": {
@@ -57,7 +57,9 @@
 		"vitest-browser-svelte": "^2.0.1",
 		"wrangler": "^4.0.0"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"dompurify": "^3.4.16"
+	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
 			"esbuild",

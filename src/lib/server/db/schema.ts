@@ -1,7 +1,8 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const user = sqliteTable('user', {
+	label: text('label').notNull().default(''),
 	id: text('id').primaryKey(), // SHA256 hash of the two patterns
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
@@ -12,6 +13,7 @@ export const user = sqliteTable('user', {
 });
 
 export const tab = sqliteTable('tab', {
+	pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
 	id: text('id').primaryKey(),
 	userId: text('user_id')
 		.notNull()
@@ -49,3 +51,16 @@ export const drop = sqliteTable('drop', {
 export type User = typeof user.$inferSelect;
 export type Tab = typeof tab.$inferSelect;
 export type Drop = typeof drop.$inferSelect;
+
+export const pomodoro = sqliteTable(
+	'pomodoro',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		seconds: integer('seconds').notNull(),
+		completedAt: integer('completed_at', { mode: 'timestamp' }).notNull()
+	},
+	(table) => [index('pomodoro_user_completed').on(table.userId, table.completedAt)]
+);

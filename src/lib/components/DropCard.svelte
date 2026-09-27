@@ -1,150 +1,249 @@
 <script lang="ts">
-	import type { ClientDrop } from '$lib/stores/drops';
-
-	let { drop, onDelete }: { drop: ClientDrop; onDelete: () => void } = $props();
-
-	function formatTime(date: Date) {
-		return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date);
+	import { resolve } from '$app/paths';
+	import { dropStore, type ClientDrop } from '$lib/stores/drops';
+	import { emitDropUpdate } from '$lib/stores/socket';
+	let { drop, onDelete }: { drop: ClientDrop; onDelete: () => void | Promise<void> } = $props();
+	let editing = $state(false);
+	let draft = $state('');
+	let saving = $state(false);
+	let confirmDelete = $state(false);
+	let message = $state('');
+	let editRef = $state<HTMLTextAreaElement | null>(null);
+	const fileKey = $derived(drop.fileUrl?.startsWith('/files/') ? drop.fileUrl.slice(7) : '');
+	const fileHref = $derived(resolve('/files/[...key]', { key: fileKey }));
+	$effect(() => {
+		if (editing && editRef) editRef.focus();
+	});
+	function formatSize(bytes: number) {
+		return bytes < 1024
+			? `${bytes} B`
+			: bytes < 1048576
+				? `${(bytes / 1024).toFixed(1)} KB`
+				: `${(bytes / 1048576).toFixed(1)} MB`;
 	}
-
-	function formatSize(bytes: number | null | undefined) {
-		if (!bytes) return '';
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	async function saveEdit() {
+		if (!draft.trim() || saving) return;
+		saving = true;
+		message = '';
+		try {
+			const content = draft.trim();
+			const response = await fetch(`/api/drops/${drop.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ content })
+			});
+			if (!response.ok) throw new Error('Save failed');
+			dropStore.updateDrop(drop.id, content);
+			emitDropUpdate(drop.id, content);
+			editing = false;
+		} catch {
+			message = 'Could not save. Your edit is still here.';
+		} finally {
+			saving = false;
+		}
 	}
-
-	let copied = $state(false);
-
-	async function copyUrl() {
-		if (!drop.fileUrl) return;
-		await navigator.clipboard.writeText(window.location.origin + drop.fileUrl);
-		copied = true;
-		setTimeout(() => (copied = false), 1500);
+	async function copy(kind: 'text' | 'link' | 'image') {
+		message = '';
+		try {
+			if (kind === 'image') {
+				const png = (async () => {
+					const response = await fetch(fileHref);
+					if (!response.ok) throw new Error('Image unavailable');
+					const bitmap = await createImageBitmap(await response.blob());
+					const canvas = document.createElement('canvas');
+					canvas.width = bitmap.width;
+					canvas.height = bitmap.height;
+					canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+					bitmap.close();
+					return new Promise<Blob>((resolve, reject) =>
+						canvas.toBlob(
+							(blob) => (blob ? resolve(blob) : reject(new Error('Image unavailable'))),
+							'image/png'
+						)
+					);
+				})();
+				await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+			} else
+				await navigator.clipboard.writeText(
+					kind === 'text' ? (drop.content ?? '') : new URL(fileHref, location.origin).href
+				);
+			message = kind === 'image' ? 'Image copied' : kind === 'text' ? 'Text copied' : 'Link copied';
+		} catch {
+			message = 'Copy unavailable in this browser. Select the text or download the file.';
+		}
 	}
 </script>
 
-<div class="drop-card group relative">
-	<!-- Delete button -->
-	<button
-		onclick={onDelete}
-		class="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-(--text-muted) opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
-		title="Delete"
-	>
-		<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-		</svg>
-	</button>
-
-	<!-- Content -->
+<article class="drop-card" aria-label={drop.type === 'text' ? 'Text drop' : `${drop.type} drop`}>
 	{#if drop.type === 'text'}
-		<p class="whitespace-pre-wrap break-words text-sm text-(--text-primary) pr-6">{drop.content}</p>
-
+		{#if editing}
+			<textarea
+				bind:this={editRef}
+				bind:value={draft}
+				aria-label="Edit drop text"
+				maxlength="100000"
+				rows="4"
+				disabled={saving}
+				onkeydown={(event) => {
+					if (event.key === 'Escape') editing = false;
+					if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+						event.preventDefault();
+						void saveEdit();
+					}
+				}}
+			></textarea>
+			<div class="actions">
+				<button class="primary" disabled={saving || !draft.trim()} onclick={saveEdit}
+					>{saving ? 'Saving…' : 'Save edit'}</button
+				><button disabled={saving} onclick={() => (editing = false)}>Cancel</button>
+			</div>
+		{:else}<p class="drop-text">{drop.content}</p>{/if}
 	{:else if drop.type === 'image'}
-		<img
-			src={drop.fileUrl ?? ''}
-			alt={drop.fileName ?? 'image'}
-			class="max-w-full rounded-lg"
-			style="max-height: 240px; object-fit: cover;"
-		/>
-		<div class="mt-1.5 flex items-center gap-2">
-			<span class="truncate text-xs text-(--text-muted)">{drop.fileName ?? 'image'}</span>
-			<a
-				href={drop.fileUrl ?? ''}
-				download={drop.fileName ?? 'image'}
-				class="ml-auto shrink-0 text-xs text-(--text-secondary) hover:text-(--text-primary)"
-				title="Download"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-				</svg>
-			</a>
-			<button
-				onclick={copyUrl}
-				class="shrink-0 text-xs text-(--text-secondary) hover:text-(--text-primary)"
-				title={copied ? 'Copied!' : 'Copy URL'}
-			>
-				{#if copied}
-					<svg class="h-3.5 w-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-					</svg>
-				{:else}
-					<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-					</svg>
-				{/if}
-			</button>
-		</div>
-
+		<a
+			href={resolve('/files/[...key]', { key: fileKey })}
+			target="_blank"
+			rel="noreferrer"
+			title="Open image"
+			><img src={fileHref} alt={drop.fileName ?? 'Pasted image'} loading="lazy" /></a
+		>
 	{:else if drop.type === 'video'}
 		<!-- svelte-ignore a11y_media_has_caption -->
-		<video src={drop.fileUrl ?? ''} controls class="max-w-full rounded-lg" style="max-height: 240px;"></video>
-		<div class="mt-1.5 flex items-center gap-2">
-			<span class="truncate text-xs text-(--text-muted)">{drop.fileName ?? 'video'}</span>
-			<a
-				href={drop.fileUrl ?? ''}
-				download={drop.fileName ?? 'video'}
-				class="ml-auto shrink-0 text-xs text-(--text-secondary) hover:text-(--text-primary)"
-				title="Download"
-			>
-				<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-				</svg>
-			</a>
-		</div>
-
+		<video src={fileHref} controls preload="metadata"></video>
 	{:else if drop.type === 'audio'}
-		<audio src={drop.fileUrl ?? ''} controls class="w-full"></audio>
-		<div class="mt-1.5 flex items-center gap-2">
-			<span class="truncate text-xs text-(--text-muted)">{drop.fileName ?? 'audio'}</span>
-			<a
-				href={drop.fileUrl ?? ''}
-				download={drop.fileName ?? 'audio'}
-				class="ml-auto shrink-0 text-xs text-(--text-secondary) hover:text-(--text-primary)"
-				title="Download"
+		<audio src={fileHref} controls preload="metadata"></audio>
+	{/if}
+	{#if drop.type !== 'text'}<div class="file-info">
+			<span>{drop.fileName ?? 'Attachment'}</span>{#if drop.fileSize}<small
+					>{formatSize(drop.fileSize)}</small
+				>{/if}
+		</div>{/if}
+	{#if !editing}
+		<div class="actions">
+			{#if drop.type === 'text'}<button onclick={() => copy('text')}>Copy</button><button
+					onclick={() => {
+						draft = drop.content ?? '';
+						editing = true;
+						message = '';
+					}}>Edit</button
+				>
+			{:else}
+				<a
+					href={resolve('/files/[...key]', { key: fileKey })}
+					download={drop.fileName ?? 'attachment'}>Download</a
+				>
+				{#if drop.type === 'image'}<button onclick={() => copy('image')}>Copy image</button>{/if}
+				<button onclick={() => copy('link')}>Copy link</button>
+			{/if}
+			<button
+				class="delete"
+				onclick={() => (confirmDelete = !confirmDelete)}
+				aria-label="Delete drop">×</button
 			>
-				<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-				</svg>
-			</a>
-		</div>
-
-	{:else}
-		<!-- pdf / file -->
-		<div class="flex items-center gap-2.5 pr-6">
-			<div class="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-(--hover-bg) text-(--text-secondary)">
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-				</svg>
-			</div>
-			<div class="min-w-0 flex-1">
-				<p class="truncate text-sm text-(--text-primary)">{drop.fileName ?? 'file'}</p>
-				{#if drop.fileSize}
-					<p class="text-xs text-(--text-muted)">{formatSize(drop.fileSize)}</p>
-				{/if}
-			</div>
-			<a
-				href={drop.fileUrl ?? ''}
-				download={drop.fileName ?? 'file'}
-				class="shrink-0 text-(--text-secondary) hover:text-(--text-primary)"
-				title="Download"
-			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-				</svg>
-			</a>
 		</div>
 	{/if}
-
-	<p class="mt-1 text-right text-[10px] text-(--text-muted)">{formatTime(drop.createdAt)}</p>
-</div>
+	{#if confirmDelete}<div class="actions" role="group" aria-label="Confirm deletion">
+			<span>Delete this drop?</span><button class="delete" onclick={onDelete}>Delete</button><button
+				onclick={() => (confirmDelete = false)}>Cancel</button
+			>
+		</div>{/if}
+	{#if message}<p class="message" role="status">{message}</p>{/if}
+	<time datetime={drop.createdAt.toISOString()}
+		>{drop.createdAt.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</time
+	>
+</article>
 
 <style>
 	.drop-card {
 		background: var(--bg-primary);
 		border: 1px solid var(--border-color);
 		border-radius: 12px;
-		padding: 10px 12px 6px;
-		margin-bottom: 6px;
+		padding: 12px 12px 8px;
+		margin-bottom: 10px;
+	}
+	.drop-text {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		font-size: 13px;
+		line-height: 1.65;
+	}
+	img,
+	video {
+		max-width: 100%;
+		max-height: 260px;
+		object-fit: contain;
+		border-radius: 8px;
+	}
+	audio {
+		width: 100%;
+		height: 36px;
+	}
+	.file-info {
+		display: flex;
+		flex-direction: column;
+		gap: 3px;
+		margin: 8px 0;
+		font-size: 12px;
+		overflow-wrap: anywhere;
+	}
+	small {
+		color: var(--text-muted);
+	}
+	.actions {
+		display: flex;
+		gap: 3px;
+		align-items: center;
+		flex-wrap: wrap;
+		margin-top: 8px;
+		color: var(--text-secondary);
+		font-size: 11px;
+	}
+	.actions button,
+	.actions a {
+		padding: 6px 7px;
+		border-radius: 5px;
+		min-height: 30px;
+		cursor: pointer;
+	}
+	.actions button:hover,
+	.actions a:hover {
+		background: var(--hover-bg);
+		color: var(--text-primary);
+	}
+	.actions .delete {
+		margin-left: auto;
+	}
+	.actions .delete:hover {
+		color: #c65442;
+	}
+	.actions .primary {
+		background: var(--accent-color);
+		color: var(--bg-primary);
+	}
+	textarea {
+		width: 100%;
+		resize: vertical;
+		min-height: 100px;
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 8px;
+		background: var(--bg-secondary);
+		color: var(--text-primary);
+		font-size: 13px;
+	}
+	.message {
+		font-size: 11px;
+		color: var(--text-secondary);
+		margin-top: 6px;
+	}
+	time {
+		display: block;
+		text-align: right;
+		font-size: 10px;
+		color: var(--text-muted);
+		margin-top: 4px;
+	}
+	button:disabled {
+		opacity: 0.45;
+		cursor: default;
 	}
 </style>

@@ -1,5 +1,4 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
-import type { AppDb } from '$lib/server/db';
 
 declare global {
 	namespace App {

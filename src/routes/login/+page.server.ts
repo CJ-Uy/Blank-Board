@@ -23,7 +23,10 @@ export const actions: Actions = {
 		}
 
 		// Validate pattern formats (dash-separated numbers 1-9)
-		if (!/^[1-9](-[1-9])+$/.test(patternA)) {
+		if (
+			!/^[1-9](-[1-9]){2,8}$/.test(patternA) ||
+			new Set(patternA.split('-')).size !== patternA.split('-').length
+		) {
 			return fail(400, { message: 'Pattern A must connect at least 3 dots' });
 		}
 		if (!/^[1-9](-[1-9]){4}$/.test(patternB)) {
@@ -58,15 +61,15 @@ export const actions: Actions = {
 				updatedAt: now
 			});
 		} else {
-			await db
-				.update(table.user)
-				.set({ lastActiveAt: now })
-				.where(eq(table.user.id, userKey));
+			await db.update(table.user).set({ lastActiveAt: now }).where(eq(table.user.id, userKey));
 		}
 
 		const token = auth.generateSessionToken();
 		await auth.createSession(token, userKey, kv);
-		auth.setSessionTokenCookie({ cookies } as Parameters<typeof auth.setSessionTokenCookie>[0], token);
+		auth.setSessionTokenCookie(
+			{ cookies } as Parameters<typeof auth.setSessionTokenCookie>[0],
+			token
+		);
 
 		redirect(302, '/');
 	}

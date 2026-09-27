@@ -6,6 +6,7 @@
 	const activeTab = boardStore.activeTab;
 
 	let dragCounter = $state(0);
+	let uploadMessage = $state('');
 	const isDragging = $derived(dragCounter > 0);
 
 	function hasFiles(e: DragEvent): boolean {
@@ -37,6 +38,7 @@
 	}
 
 	async function onDrop(e: DragEvent) {
+		if (!hasFiles(e)) return;
 		e.preventDefault();
 		dragCounter = 0;
 
@@ -46,33 +48,40 @@
 		const files = Array.from(e.dataTransfer?.files ?? []);
 		if (!files.length) return;
 
-		for (const file of files) {
-			const form = new FormData();
-			form.append('file', file);
+		try {
+			for (const file of files) {
+				uploadMessage = `Uploading ${file.name}…`;
+				const form = new FormData();
+				form.append('file', file);
 
-			const uploadRes = await fetch('/api/upload', { method: 'POST', body: form });
-			if (!uploadRes.ok) continue;
-			const { url } = await uploadRes.json();
+				const uploadRes = await fetch('/api/upload', { method: 'POST', body: form });
+				if (!uploadRes.ok)
+					throw new Error('Upload failed. Check the file type and 50 MB limit, then try again.');
+				const { url } = (await uploadRes.json()) as { url: string };
 
-			const type = getMimeCategory(file.type);
-			const res = await fetch('/api/drops', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					tabId: tab.id,
-					type,
-					fileUrl: url,
-					fileName: file.name,
-					fileSize: file.size,
-					mimeType: file.type
-				})
-			});
-			if (!res.ok) continue;
+				const type = getMimeCategory(file.type);
+				const res = await fetch('/api/drops', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						tabId: tab.id,
+						type,
+						fileUrl: url,
+						fileName: file.name,
+						fileSize: file.size,
+						mimeType: file.type
+					})
+				});
+				if (!res.ok) throw new Error('Could not attach the file. Please try again.');
 
-			const drop: ClientDrop = await res.json();
-			drop.createdAt = new Date(drop.createdAt);
-			dropStore.addDrop(drop);
-			emitDropCreate(drop);
+				const drop: ClientDrop = await res.json();
+				drop.createdAt = new Date(drop.createdAt);
+				dropStore.addDrop(drop);
+				emitDropCreate(drop);
+			}
+			uploadMessage = 'Files uploaded';
+		} catch (error) {
+			uploadMessage = error instanceof Error ? error.message : 'Upload failed. Please try again.';
 		}
 	}
 </script>
@@ -84,14 +93,37 @@
 	ondrop={onDrop}
 />
 
+{#if uploadMessage}<div
+		role="status"
+		class="fixed bottom-4 left-4 z-50 max-w-sm rounded-lg border border-(--border-color) bg-(--bg-secondary) p-3 text-sm"
+	>
+		{uploadMessage}<button
+			class="ml-3"
+			aria-label="Dismiss upload status"
+			onclick={() => (uploadMessage = '')}>×</button
+		>
+	</div>{/if}
+
 {#if isDragging}
 	<div class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
 		<!-- Backdrop -->
 		<div class="absolute inset-0 bg-(--bg-primary) opacity-80"></div>
 		<!-- Drop zone indicator -->
-		<div class="relative mx-8 flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-(--accent-color) px-16 py-12">
-			<svg class="h-12 w-12 text-(--accent-color)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+		<div
+			class="relative mx-8 flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-(--accent-color) px-16 py-12"
+		>
+			<svg
+				class="h-12 w-12 text-(--accent-color)"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+				/>
 			</svg>
 			<div class="text-center">
 				<p class="text-lg font-medium text-(--text-primary)">Drop to send</p>

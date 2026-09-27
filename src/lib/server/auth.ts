@@ -9,7 +9,7 @@ export const sessionCookieName = 'auth-session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 // Derives a stable user ID from the two pattern sequences.
-// Called client-side to avoid sending raw patterns to the server.
+// Called by the login action. Raw patterns are never stored.
 export function deriveUserKey(patternA: string, patternB: string): string {
 	return encodeHexLowerCase(sha256(new TextEncoder().encode(`${patternA}|${patternB}`)));
 }

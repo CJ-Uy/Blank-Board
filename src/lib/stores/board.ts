@@ -1,7 +1,10 @@
 import { writable, derived, get } from 'svelte/store';
 import type { Tab } from '$lib/server/db/schema';
 
-export type ClientTab = Pick<Tab, 'id' | 'name' | 'content' | 'order'>;
+export type ClientTab = Pick<Tab, 'id' | 'name' | 'content' | 'order'> & {
+	pinned?: boolean;
+	updatedAt?: Date | string;
+};
 
 function createBoardStore() {
 	const tabs = writable<ClientTab[]>([]);
@@ -12,25 +15,28 @@ function createBoardStore() {
 	});
 
 	const sortedTabs = derived(tabs, ($tabs) => {
-		return [...$tabs].sort((a, b) => a.order - b.order);
+		return [...$tabs].sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || a.order - b.order);
 	});
 
 	function setTabs(newTabs: ClientTab[]) {
 		tabs.set(newTabs);
 		const currentActiveId = get(activeTabId);
+		if (!newTabs.length) activeTabId.set(null);
 		if (!newTabs.find((t) => t.id === currentActiveId) && newTabs.length > 0) {
 			activeTabId.set(newTabs[0].id);
 		}
 	}
 
-	function addTab(tab: ClientTab) {
-		tabs.update((current) => [...current, tab]);
-		activeTabId.set(tab.id);
+	function addTab(tab: ClientTab, activate = true) {
+		tabs.update((current) =>
+			current.some((item) => item.id === tab.id) ? current : [...current, tab]
+		);
+		if (activate || !get(activeTabId)) activeTabId.set(tab.id);
 	}
 
-	function updateTab(id: string, updates: Partial<Pick<ClientTab, 'name' | 'content'>>) {
+	function updateTab(id: string, updates: Partial<Pick<ClientTab, 'name' | 'content' | 'pinned'>>) {
 		tabs.update((current) =>
-			current.map((tab) => (tab.id === id ? { ...tab, ...updates } : tab))
+			current.map((tab) => (tab.id === id ? { ...tab, ...updates, updatedAt: new Date() } : tab))
 		);
 	}
 

@@ -11,7 +11,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 			id: table.tab.id,
 			name: table.tab.name,
 			content: table.tab.content,
-			order: table.tab.order
+			order: table.tab.order,
+			pinned: table.tab.pinned,
+			updatedAt: table.tab.updatedAt
 		})
 		.from(table.tab)
 		.where(eq(table.tab.userId, locals.user.id))

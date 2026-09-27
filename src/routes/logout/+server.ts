@@ -6,7 +6,9 @@ export const POST: RequestHandler = async ({ locals, cookies, platform }) => {
 	if (locals.session) {
 		const kv = platform?.env?.CACHE;
 		if (kv) await auth.invalidateSession(locals.session.id, kv);
-		auth.deleteSessionTokenCookie({ cookies } as Parameters<typeof auth.deleteSessionTokenCookie>[0]);
+		auth.deleteSessionTokenCookie({ cookies } as Parameters<
+			typeof auth.deleteSessionTokenCookie
+		>[0]);
 	}
 	redirect(302, '/login');
 };

@@ -101,7 +101,7 @@
 
 	<!-- Day names header -->
 	<div class="mb-1 grid grid-cols-7 gap-0">
-		{#each dayNames as dayName}
+		{#each dayNames as dayName (dayName)}
 			<div class="py-1 text-center text-xs font-medium text-(--text-muted)">
 				{dayName}
 			</div>
@@ -110,7 +110,7 @@
 
 	<!-- Calendar grid -->
 	<div class="grid grid-cols-7 gap-0">
-		{#each calendarDays as { day, isCurrentMonth, isToday }}
+		{#each calendarDays as { day, isCurrentMonth, isToday }, index (index)}
 			<div
 				class="flex h-7 w-7 items-center justify-center text-xs
 					{isToday
@@ -126,6 +126,6 @@
 
 	<!-- Current time -->
 	<div class="mt-auto pt-4 text-center">
-		<p class="font-mono text-2xl tabular-nums text-(--text-primary)">{time}</p>
+		<p class="font-mono text-2xl text-(--text-primary) tabular-nums">{time}</p>
 	</div>
 </div>

@@ -3,6 +3,9 @@ import { uploadFile } from '$lib/server/storage';
 import type { RequestHandler } from './$types';
 
 const ALLOWED_TYPES: Record<string, string[]> = {
+	'text/plain': ['txt'],
+	'text/markdown': ['md'],
+	'text/csv': ['csv'],
 	'image/jpeg': ['jpg', 'jpeg'],
 	'image/png': ['png'],
 	'image/gif': ['gif'],
@@ -32,7 +35,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	if (!ALLOWED_TYPES[file.type]) error(400, `Invalid file type: ${file.type}`);
 	if (file.size > MAX_FILE_SIZE) error(400, 'File too large (max 50 MB)');
 
-	const ext = file.name.split('.').pop()?.toLowerCase() ?? ALLOWED_TYPES[file.type][0];
+	const requestedExt = file.name.split('.').pop()?.toLowerCase();
+	const ext =
+		requestedExt && ALLOWED_TYPES[file.type].includes(requestedExt)
+			? requestedExt
+			: ALLOWED_TYPES[file.type][0];
 	const key = `${locals.user.id}/${crypto.randomUUID()}.${ext}`;
 
 	const buffer = await file.arrayBuffer();

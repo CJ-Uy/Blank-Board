@@ -27,9 +27,27 @@
 }
 
 body {
+	font-family: 'IBM Plex Sans', system-ui, sans-serif;
 	background-color: var(--bg-primary);
 	color: var(--text-primary);
-	transition: background-color 0.2s ease, color 0.2s ease;
+	transition:
+		background-color 0.2s ease,
+		color 0.2s ease;
+}
+
+:where(button, a, input, textarea, select):focus-visible {
+	outline: 2px solid var(--text-secondary);
+	outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }
 
 /* Scrollbar styling */

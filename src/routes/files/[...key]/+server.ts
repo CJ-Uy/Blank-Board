@@ -13,6 +13,9 @@ export const GET: RequestHandler = async ({ params, platform }) => {
 		const { body, contentType } = await getFile(r2, key);
 		return new Response(body, {
 			headers: {
+				'X-Content-Type-Options': 'nosniff',
+				'Content-Security-Policy':
+					"sandbox; default-src 'none'; style-src 'unsafe-inline'; media-src 'self'; img-src 'self' data:",
 				'Content-Type': contentType,
 				'Cache-Control': 'public, max-age=31536000, immutable'
 			}

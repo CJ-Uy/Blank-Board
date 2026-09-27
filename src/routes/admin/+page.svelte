@@ -1,9 +1,21 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 	let loading = $state(false);
+	let search = $state('');
+	let sort = $state('storage');
+	const users = $derived(
+		(data.users ?? [])
+			.filter((u) => `${u.label} ${u.id}`.toLowerCase().includes(search.toLowerCase()))
+			.sort((a, b) =>
+				sort === 'storage'
+					? b.fileBytes + b.textBytes - a.fileBytes - a.textBytes
+					: b.lastActiveAt.localeCompare(a.lastActiveAt)
+			)
+	);
 
 	function formatBytes(bytes: number): string {
 		if (bytes < 1024) return `${bytes} B`;
@@ -93,7 +105,10 @@
 			</form>
 
 			<p class="mt-6 text-center text-sm text-gray-500">
-				<a href="/" class="text-[#1a1a1a] underline underline-offset-2 hover:no-underline">
+				<a
+					href={resolve('/')}
+					class="text-[#1a1a1a] underline underline-offset-2 hover:no-underline"
+				>
 					Back to app
 				</a>
 			</p>
@@ -137,6 +152,29 @@
 			</div>
 
 			<!-- Users table -->
+			{#if form?.message}<p class="mb-4 text-sm text-gray-600" role="status">{form.message}</p>{/if}
+			<div class="mb-4 flex flex-wrap gap-3">
+				<input
+					aria-label="Find account by label or hash"
+					type="search"
+					bind:value={search}
+					placeholder="Find label or hash…"
+					class="min-w-64 rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+				/>
+				<select
+					aria-label="Sort accounts"
+					bind:value={sort}
+					class="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+					><option value="storage">Largest storage first</option><option value="active"
+						>Recently active</option
+					></select
+				>
+			</div>
+			<p class="mb-4 text-xs text-gray-500">
+				Labels are visible only here. Text counts note HTML and drop text; files count actual R2
+				objects, including retained attachments. These are content sizes, not database billing
+				totals.
+			</p>
 			<div class="rounded border border-gray-200 bg-white">
 				<div class="border-b border-gray-200 px-6 py-4">
 					<h2 class="text-lg font-medium text-[#1a1a1a]">Users</h2>
@@ -147,15 +185,15 @@
 							<tr>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>User ID</th
+									>Label / account hash</th
 								>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>Tabs</th
+									>Notes / drops</th
 								>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-									>Created</th
+									>Storage</th
 								>
 								<th
 									class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -164,18 +202,43 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200">
-							{#each data.users as user}
+							{#each users as user (user.id)}
 								<tr class="hover:bg-gray-50">
-									<td class="px-6 py-4 font-mono text-xs text-[#1a1a1a]" title={user.id}>{user.id.slice(0, 12)}…</td>
-									<td class="px-6 py-4 text-sm text-gray-500">{user.tabCount}</td>
-									<td class="px-6 py-4 text-sm text-gray-500">{formatDate(user.createdAt)}</td>
-									<td class="px-6 py-4 text-sm text-gray-500">{timeAgo(user.lastActiveAt)}</td>
+									<td class="px-6 py-4 text-xs text-[#1a1a1a]">
+										<form method="POST" action="?/label" use:enhance class="mb-2 flex gap-2">
+											<input type="hidden" name="userId" value={user.id} /><input
+												name="label"
+												aria-label={`Label for ${user.id.slice(0, 12)}`}
+												value={user.label}
+												maxlength="100"
+												placeholder="Name this account"
+												class="rounded border border-gray-300 bg-white px-2 py-1"
+											/><button class="rounded border border-gray-300 px-2 py-1">Save</button>
+										</form>
+										<details>
+											<summary class="cursor-pointer font-mono">{user.id.slice(0, 12)}…</summary
+											><span class="block max-w-72 font-mono break-all select-all">{user.id}</span>
+										</details>
+									</td>
+									<td class="px-6 py-4 text-sm text-gray-500">{user.tabCount} / {user.dropCount}</td
+									>
+									<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-500"
+										><strong class="text-gray-900"
+											>{formatBytes(user.fileBytes + user.textBytes)}</strong
+										><br /><span class="text-xs"
+											>{formatBytes(user.textBytes)} text · {formatBytes(user.fileBytes)} files</span
+										></td
+									>
+									<td
+										class="px-6 py-4 text-sm text-gray-500"
+										title={`Created ${formatDate(user.createdAt)}`}>{timeAgo(user.lastActiveAt)}</td
+									>
 								</tr>
 							{/each}
-							{#if data.users.length === 0}
+							{#if users.length === 0}
 								<tr>
 									<td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">
-										No users registered yet
+										No matching accounts
 									</td>
 								</tr>
 							{/if}

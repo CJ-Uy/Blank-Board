@@ -1,7 +1,16 @@
 /// <reference types="@cloudflare/workers-types" />
 
 interface SyncMessage {
-	type: 'tab:create' | 'tab:update' | 'tab:delete' | 'content:update' | 'tabs:reorder' | 'drop:create' | 'drop:delete' | 'ping';
+	type:
+		| 'tab:create'
+		| 'tab:update'
+		| 'tab:delete'
+		| 'content:update'
+		| 'tabs:reorder'
+		| 'drop:create'
+		| 'drop:update'
+		| 'drop:delete'
+		| 'ping';
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	payload: any;
 }

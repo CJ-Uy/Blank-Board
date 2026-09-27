@@ -36,7 +36,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) error(401, 'Unauthorized');
 
-	const body = await request.json() as {
+	const body = (await request.json()) as {
 		tabId: string;
 		type: string;
 		content?: string;
@@ -49,6 +49,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const { tabId, type, content, fileUrl, fileName, fileSize, mimeType } = body;
 
 	if (!tabId || !type) error(400, 'tabId and type are required');
+	if (
+		typeof tabId !== 'string' ||
+		!['text', 'image', 'video', 'audio', 'pdf', 'file'].includes(type)
+	)
+		error(400, 'Invalid drop');
+	if (type === 'text' && (typeof content !== 'string' || !content.trim()))
+		error(400, 'Text is required');
+	if (
+		fileUrl !== undefined &&
+		(typeof fileUrl !== 'string' ||
+			!fileUrl.startsWith(`/files/${locals.user.id}/`) ||
+			fileUrl.includes('..'))
+	)
+		error(400, 'Invalid file URL');
+	if (type !== 'text' && !fileUrl) error(400, 'File is required');
 
 	// Verify tab belongs to user
 	const [tab] = await locals.db

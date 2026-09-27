@@ -11,7 +11,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 			id: table.tab.id,
 			name: table.tab.name,
 			content: table.tab.content,
-			order: table.tab.order
+			order: table.tab.order,
+			pinned: table.tab.pinned,
+			updatedAt: table.tab.updatedAt
 		})
 		.from(table.tab)
 		.where(eq(table.tab.userId, locals.user.id))
@@ -41,7 +43,12 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) error(401, 'Unauthorized');
 
-	const body = await request.json() as { id?: string; name?: string; content?: string; order?: number };
+	const body = (await request.json()) as {
+		id?: string;
+		name?: string;
+		content?: string;
+		order?: number;
+	};
 	const { id, name, content, order } = body;
 
 	if (!id || typeof id !== 'string') error(400, 'Invalid tab ID');
